@@ -1,0 +1,340 @@
+diff --git a/m33_00_00_00_004012.flver.json b/m33_00_00_00_004012.flver.json
+index d91de1a..04c6400 100644
+--- a/m33_00_00_00_004012.flver.json
++++ b/m33_00_00_00_004012.flver.json
+@@ -161,6 +161,11 @@
+           "unk04": 100,
+           "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+         },
++        {
++          "id": "GX02",
++          "unk04": 100,
++          "data": "CtcjPAAAAAAzMzM+CAAAAEAAAAAAAAAAAAAAAAAAAAA="
++        },
+         {
+           "id": "GX04",
+           "unk04": 100,
+@@ -203,7 +208,7 @@
+     {
+       "index": 0,
+       "name": "Material #118",
+-      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l.mtd",
++      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l_p.mtd",
+       "gxIndex": 0,
+       "materialIndex": 0,
+       "textures": [
+@@ -303,7 +308,7 @@
+     {
+       "index": 1,
+       "name": "Material #120",
+-      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l.mtd",
++      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l_p.mtd",
+       "gxIndex": 0,
+       "materialIndex": 0,
+       "textures": [
+@@ -403,7 +408,7 @@
+     {
+       "index": 2,
+       "name": "Material #121",
+-      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l.mtd",
++      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l_p.mtd",
+       "gxIndex": 0,
+       "materialIndex": 0,
+       "textures": [
+@@ -503,7 +508,7 @@
+     {
+       "index": 3,
+       "name": "Material #154",
+-      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l.mtd",
++      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l_p.mtd",
+       "gxIndex": 0,
+       "materialIndex": 0,
+       "textures": [
+@@ -603,7 +608,7 @@
+     {
+       "index": 4,
+       "name": "Material #155",
+-      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l.mtd",
++      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l_p.mtd",
+       "gxIndex": 0,
+       "materialIndex": 0,
+       "textures": [
+@@ -703,7 +708,7 @@
+     {
+       "index": 5,
+       "name": "Material #156",
+-      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l.mtd",
++      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l_p.mtd",
+       "gxIndex": 0,
+       "materialIndex": 0,
+       "textures": [
+@@ -803,7 +808,7 @@
+     {
+       "index": 6,
+       "name": "Material #157",
+-      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l.mtd",
++      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l_p.mtd",
+       "gxIndex": 0,
+       "materialIndex": 0,
+       "textures": [
+@@ -903,7 +908,7 @@
+     {
+       "index": 7,
+       "name": "Material #158",
+-      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l.mtd",
++      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l_p.mtd",
+       "gxIndex": 0,
+       "materialIndex": 0,
+       "textures": [
+@@ -1003,7 +1008,7 @@
+     {
+       "index": 8,
+       "name": "Material #159",
+-      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l.mtd",
++      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l_p.mtd",
+       "gxIndex": 0,
+       "materialIndex": 0,
+       "textures": [
+@@ -1112,7 +1117,7 @@
+         {
+           "flags": 0,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             183,
+@@ -2386,7 +2391,7 @@
+         {
+           "flags": 16777216,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             183,
+@@ -3108,7 +3113,7 @@
+         {
+           "flags": 33554432,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             0,
+@@ -41557,7 +41562,7 @@
+         {
+           "flags": 0,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             950,
+@@ -44055,7 +44060,7 @@
+         {
+           "flags": 16777216,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             367,
+@@ -45557,7 +45562,7 @@
+         {
+           "flags": 33554432,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             9,
+@@ -118019,7 +118024,7 @@
+         {
+           "flags": 0,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             633,
+@@ -119935,7 +119940,7 @@
+         {
+           "flags": 16777216,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             8,
+@@ -121131,7 +121136,7 @@
+         {
+           "flags": 33554432,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             0,
+@@ -176890,7 +176895,7 @@
+         {
+           "flags": 0,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             1646,
+@@ -187914,7 +187919,7 @@
+         {
+           "flags": 16777216,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             1344,
+@@ -194702,7 +194707,7 @@
+         {
+           "flags": 33554432,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             489,
+@@ -491031,7 +491036,7 @@
+         {
+           "flags": 0,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             3453,
+@@ -503663,7 +503668,7 @@
+         {
+           "flags": 16777216,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             3717,
+@@ -510457,7 +510462,7 @@
+         {
+           "flags": 33554432,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             487,
+@@ -865442,7 +865447,7 @@
+         {
+           "flags": 0,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             1413,
+@@ -875938,7 +875943,7 @@
+         {
+           "flags": 16777216,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             966,
+@@ -882153,7 +882158,7 @@
+         {
+           "flags": 33554432,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             500,
+@@ -1140143,7 +1140148,7 @@
+         {
+           "flags": 0,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             4334,
+@@ -1152703,7 +1152708,7 @@
+         {
+           "flags": 16777216,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             4562,
+@@ -1160520,7 +1160525,7 @@
+         {
+           "flags": 33554432,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             0,
+@@ -1536526,7 +1536531,7 @@
+         {
+           "flags": 0,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             6273,
+@@ -1548444,7 +1548449,7 @@
+         {
+           "flags": 16777216,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             2,
+@@ -1555538,7 +1555543,7 @@
+         {
+           "flags": 33554432,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             533,
+@@ -1894529,7 +1894534,7 @@
+         {
+           "flags": 0,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             7,
+@@ -1906111,7 +1906116,7 @@
+         {
+           "flags": 16777216,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             1749,
+@@ -1913406,7 +1913411,7 @@
+         {
+           "flags": 33554432,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             0,

@@ -1,0 +1,279 @@
+diff --git a/m27_00_00_00_002735.flver.json b/m27_00_00_00_002735.flver.json
+index bb7b1eb..128e796 100644
+--- a/m27_00_00_00_002735.flver.json
++++ b/m27_00_00_00_002735.flver.json
+@@ -267,6 +267,11 @@
+           "unk04": 100,
+           "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+         },
++        {
++          "id": "GX02",
++          "unk04": 100,
++          "data": "CtcjPAAAAAAzMzM+CAAAAEAAAAAAAAAAAAAAAAAAAAA="
++        },
+         {
+           "id": "GX04",
+           "unk04": 100,
+@@ -314,6 +319,11 @@
+           "unk04": 100,
+           "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+         },
++        {
++          "id": "GX02",
++          "unk04": 100,
++          "data": "CtcjPAAAAAAzMzM+CAAAAEAAAAAAAAAAAAAAAAAAAAA="
++        },
+         {
+           "id": "GX01",
+           "unk04": 101,
+@@ -380,13 +390,60 @@
+           "data": "AACAPwAAAAAAAAAAAAAAAA=="
+         }
+       ]
++    },
++    {
++      "index": 2,
++      "terminatorID": 2147483647,
++      "terminatorLength": 0,
++      "items": [
++        {
++          "id": "GX00",
++          "unk04": 100,
++          "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
++        },
++        {
++          "id": "GX04",
++          "unk04": 100,
++          "data": "AAAAAAAAAAAAAKBAAACAPwAAAD8AAAAAAACgQAAAAD8AAIA/AAAAAAAAAAAAAAAAAAAAAA=="
++        },
++        {
++          "id": "GX20",
++          "unk04": 100,
++          "data": "AAAAAAAAAAAAAAAA"
++        },
++        {
++          "id": "GX22",
++          "unk04": 100,
++          "data": "AAAAAAAAAAAAAAAA"
++        },
++        {
++          "id": "GX24",
++          "unk04": 100,
++          "data": "AAAAAAAAAAAAAAAA"
++        },
++        {
++          "id": "GX26",
++          "unk04": 100,
++          "data": "AAAAAAAAAAAAAAAA"
++        },
++        {
++          "id": "GX30",
++          "unk04": 100,
++          "data": "AAAAAAAAAAAAAAAA"
++        },
++        {
++          "id": "GX05",
++          "unk04": 100,
++          "data": "AACAPwAAAAAAAAAAAAAAAA=="
++        }
++      ]
+     }
+   ],
+   "materials2": [
+     {
+       "index": 0,
+       "name": "Material #29",
+-      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l.mtd",
++      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l_p.mtd",
+       "gxIndex": 0,
+       "materialIndex": 0,
+       "textures": [
+@@ -486,7 +543,7 @@
+     {
+       "index": 1,
+       "name": "Material #30",
+-      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l.mtd",
++      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l_p.mtd",
+       "gxIndex": 0,
+       "materialIndex": 0,
+       "textures": [
+@@ -586,7 +643,7 @@
+     {
+       "index": 2,
+       "name": "Material #32",
+-      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l_blend.mtd",
++      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l_m_p.mtd",
+       "gxIndex": 1,
+       "materialIndex": 0,
+       "textures": [
+@@ -777,7 +834,7 @@
+     {
+       "index": 3,
+       "name": "Material #33",
+-      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l.mtd",
++      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l_p.mtd",
+       "gxIndex": 0,
+       "materialIndex": 0,
+       "textures": [
+@@ -878,7 +935,7 @@
+       "index": 4,
+       "name": "Material #34",
+       "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l_e.mtd",
+-      "gxIndex": 0,
++      "gxIndex": 2,
+       "materialIndex": 0,
+       "textures": [
+         {
+@@ -978,7 +1035,7 @@
+       "index": 5,
+       "name": "Material #35",
+       "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l_e.mtd",
+-      "gxIndex": 0,
++      "gxIndex": 2,
+       "materialIndex": 0,
+       "textures": [
+         {
+@@ -1077,7 +1134,7 @@
+     {
+       "index": 6,
+       "name": "Material #36",
+-      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l.mtd",
++      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_l_p.mtd",
+       "gxIndex": 0,
+       "materialIndex": 0,
+       "textures": [
+@@ -1186,7 +1243,7 @@
+         {
+           "flags": 0,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             1286,
+@@ -33723,7 +33780,7 @@
+         {
+           "flags": 16777216,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             1805,
+@@ -48950,7 +49007,7 @@
+         {
+           "flags": 33554432,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             6,
+@@ -556253,7 +556310,7 @@
+         {
+           "flags": 0,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             0,
+@@ -581737,7 +581794,7 @@
+         {
+           "flags": 16777216,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             2960,
+@@ -602106,7 +602163,7 @@
+         {
+           "flags": 33554432,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             2050,
+@@ -1286751,7 +1286808,7 @@
+         {
+           "flags": 0,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             947,
+@@ -1289783,7 +1289840,7 @@
+         {
+           "flags": 16777216,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             49,
+@@ -1291669,7 +1291726,7 @@
+         {
+           "flags": 33554432,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             11,
+@@ -1365083,7 +1365140,7 @@
+         {
+           "flags": 0,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             0,
+@@ -1389349,7 +1389406,7 @@
+         {
+           "flags": 16777216,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             0,
+@@ -1401642,7 +1401699,7 @@
+         {
+           "flags": 33554432,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             706,
+@@ -2510360,7 +2510417,7 @@
+         {
+           "flags": 0,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             665,
+@@ -2514748,7 +2514805,7 @@
+         {
+           "flags": 16777216,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             665,
+@@ -2517384,7 +2517441,7 @@
+         {
+           "flags": 33554432,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             0,

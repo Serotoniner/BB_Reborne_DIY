@@ -1,0 +1,179 @@
+diff --git a/m34_00_00_00_005008.flver.json b/m34_00_00_00_005008.flver.json
+index bcbf00d..7cb1c0b 100644
+--- a/m34_00_00_00_005008.flver.json
++++ b/m34_00_00_00_005008.flver.json
+@@ -279,6 +279,53 @@
+       "index": 1,
+       "terminatorID": 2147483647,
+       "terminatorLength": 0,
++      "items": [
++        {
++          "id": "GX00",
++          "unk04": 100,
++          "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
++        },
++        {
++          "id": "GX02",
++          "unk04": 100,
++          "data": "CtcjPAAAAAAzMzM+CAAAAEAAAAAAAAAAAAAAAAAAAAA="
++        },
++        {
++          "id": "GX04",
++          "unk04": 100,
++          "data": "AAAAAAAAAAAAAKBAAACAPwAAAD8AAAAAAACgQAAAAD8AAIA/AAAAAAAAAAAAAAAAAAAAAA=="
++        },
++        {
++          "id": "GX20",
++          "unk04": 100,
++          "data": "AAAAAAAAAAAAAAAA"
++        },
++        {
++          "id": "GX22",
++          "unk04": 100,
++          "data": "AAAAAAAAAAAAAAAA"
++        },
++        {
++          "id": "GX24",
++          "unk04": 100,
++          "data": "AAAAAAAAAAAAAAAA"
++        },
++        {
++          "id": "GX26",
++          "unk04": 100,
++          "data": "AAAAAAAAAAAAAAAA"
++        },
++        {
++          "id": "GX30",
++          "unk04": 100,
++          "data": "AAAAAAAAAAAAAAAA"
++        }
++      ]
++    },
++    {
++      "index": 2,
++      "terminatorID": 2147483647,
++      "terminatorLength": 0,
+       "items": [
+         {
+           "id": "GX00",
+@@ -311,7 +358,7 @@
+         },
+         {
+           "paramName": "g_SpecularTexture",
+-          "path": "N:\\SPRJ\\data\\Other\\SysTex\\SYSTEX_DummyReflectance.tga",
++          "path": "N:\\SPRJ\\data\\Model\\map\\m34\\tex\\m34_00_grass_900_r.tif",
+           "tilingScale": [
+             1,
+             1
+@@ -324,7 +371,7 @@
+         },
+         {
+           "paramName": "g_ShininessTexture",
+-          "path": "N:\\SPRJ\\data\\Other\\SysTex\\SYSTEX_DummyShininess.tga",
++          "path": "N:\\SPRJ\\data\\Model\\map\\m34\\tex\\m34_00_grass_900_s.tif",
+           "tilingScale": [
+             1,
+             1
+@@ -337,7 +384,7 @@
+         },
+         {
+           "paramName": "g_BumpmapTexture",
+-          "path": "N:\\SPRJ\\data\\Other\\SysTex\\SYSTEX_DummyNormal.tga",
++          "path": "N:\\SPRJ\\data\\Model\\map\\m34\\tex\\m34_00_grass_900_n.tif",
+           "tilingScale": [
+             1,
+             1
+@@ -366,8 +413,8 @@
+     {
+       "index": 1,
+       "name": "Material #9108",
+-      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN].mtd",
+-      "gxIndex": 0,
++      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_p.mtd",
++      "gxIndex": 1,
+       "materialIndex": 0,
+       "textures": [
+         {
+@@ -515,7 +562,7 @@
+       "index": 3,
+       "name": "Material #9104",
+       "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[A]_e_grass.mtd",
+-      "gxIndex": 1,
++      "gxIndex": 2,
+       "materialIndex": 0,
+       "textures": [
+         {
+@@ -537,7 +584,7 @@
+       "index": 4,
+       "name": "Material #9088",
+       "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[A]_e_grass.mtd",
+-      "gxIndex": 1,
++      "gxIndex": 2,
+       "materialIndex": 0,
+       "textures": [
+         {
+@@ -558,8 +605,8 @@
+     {
+       "index": 5,
+       "name": "Material #8",
+-      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN].mtd",
+-      "gxIndex": 0,
++      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_p.mtd",
++      "gxIndex": 1,
+       "materialIndex": 0,
+       "textures": [
+         {
+@@ -48558,7 +48605,7 @@
+         {
+           "flags": 0,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             1662,
+@@ -57926,7 +57973,7 @@
+         {
+           "flags": 16777216,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             850,
+@@ -61600,7 +61647,7 @@
+         {
+           "flags": 33554432,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             0,
+@@ -1082915,7 +1082962,7 @@
+         {
+           "flags": 0,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             118,
+@@ -1084543,7 +1084590,7 @@
+         {
+           "flags": 16777216,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             1,
+@@ -1085259,7 +1085306,7 @@
+         {
+           "flags": 33554432,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             6,

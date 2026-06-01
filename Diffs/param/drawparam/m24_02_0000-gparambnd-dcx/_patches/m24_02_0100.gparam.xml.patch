@@ -1,0 +1,64 @@
+diff --git a/m24_02_0000-gparambnd-dcx/m24_02_0100.gparam.xml b/m24_02_0000-gparambnd-dcx/m24_02_0100.gparam.xml
+index 8e548be..0f6d617 100644
+--- a/m24_02_0000-gparambnd-dcx/m24_02_0100.gparam.xml
++++ b/m24_02_0000-gparambnd-dcx/m24_02_0100.gparam.xml
+@@ -13,8 +13,8 @@
+         <comment />
+       </comments>
+       <param name1="Directional Light Angle0" name2="Angle" type="Float2">
+-        <value id="0">-0.837758 -2.356194</value>
+-        <value id="11">-0.837758 -1.762783</value>
++        <value id="0">-0.55 -3.35</value>
++        <value id="11">-0.55 -3.35</value>
+       </param>
+       <param name1="Directional Light DiffColor0" name2="DiffColor" type="Float4">
+         <value id="0">0.758475 0.904661 1 0</value>
+@@ -37,12 +37,12 @@
+         <value id="11">-0.436332 -2.513274</value>
+       </param>
+       <param name1="Directional Light DiffColor1" name2="DiffColor" type="Float4">
+-        <value id="0">0.607843 0.607843 1 0.2</value>
+-        <value id="11">0.572034 0.650424 1 1.491525</value>
++        <value id="0">0.808 0.808 1 0.2</value>
++        <value id="11">0.572 0.65 1 0.3</value>
+       </param>
+       <param name1="Directional Light SpecColor1" name2="SpecColor" type="Float4">
+         <value id="0">0.607843 0.607843 1 0.2</value>
+-        <value id="11">0.563559 0.631356 1 1.38983</value>
++        <value id="11">0.564 0.631 1 0.39</value>
+       </param>
+       <param name1="Directional Light Sharpness1" name2="Sharpness" type="Float">
+         <value id="0">50</value>
+@@ -58,7 +58,7 @@
+       </param>
+       <param name1="Directional Light LocalLight DiffColor1" name2="DiffColor" type="Float4">
+         <value id="0">0 0 0 1</value>
+-        <value id="11">0.57839 0.713983 1 0.677966</value>
++        <value id="11">0.578 0.714 1 0.3</value>
+       </param>
+       <param name1="Directional Light LocalLight SpecColor1" name2="SpecColor" type="Float4">
+         <value id="0">0.747881 0.741525 1 0.1</value>
+@@ -94,7 +94,7 @@
+       </param>
+       <param name1="Directional Light Hemi Color Up" name2="Hemi Color Up" type="Float4">
+         <value id="0">0.708678 0.863636 1 1.85124</value>
+-        <value id="11">0.5 0.5 0.5 1</value>
++        <value id="11">0.5 0.5 0.5 0</value>
+       </param>
+       <param name1="Directional Light Hemi Color Down" name2="Hemi Color Down" type="Float4">
+         <value id="0">0.5 0.5 0.5 1</value>
+@@ -154,8 +154,12 @@
+     </group>
+     <group name1="Env Map:Editor" name2="Env Map">
+       <comments />
+-      <param name1="Env Map: EnvMapId" name2="EnvMap:ID" type="IntB" />
+-      <param name1="Env Map: ColorScale" name2="EnvMap:ColorScale" type="Float" />
++      <param name1="Env Map: EnvMapId" name2="EnvMap:ID" type="IntB">
++        <value id="0">0</value>
++      </param>
++      <param name1="Env Map: ColorScale" name2="EnvMap:ColorScale" type="Float">
++        <value id="0">1</value>
++      </param>
+     </group>
+     <group name1="SSAO Editor" name2="SSAO ">
+       <comments />

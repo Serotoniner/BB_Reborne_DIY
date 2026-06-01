@@ -1,0 +1,226 @@
+diff --git a/m36_00_00_00_008000.flver.json b/m36_00_00_00_008000.flver.json
+index 6bcf7a0..d0c5273 100644
+--- a/m36_00_00_00_008000.flver.json
++++ b/m36_00_00_00_008000.flver.json
+@@ -192,6 +192,53 @@
+           "data": "AAAAAAAAAAAAAAAA"
+         }
+       ]
++    },
++    {
++      "index": 1,
++      "terminatorID": 2147483647,
++      "terminatorLength": 0,
++      "items": [
++        {
++          "id": "GX00",
++          "unk04": 100,
++          "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
++        },
++        {
++          "id": "GX02",
++          "unk04": 100,
++          "data": "CtcjPAAAAAAzMzM+CAAAAEAAAAAAAAAAAAAAAAAAAAA="
++        },
++        {
++          "id": "GX04",
++          "unk04": 100,
++          "data": "AAAAAAAAAAAAAKBAAACAPwAAAD8AAAAAAACgQAAAAD8AAIA/AAAAAAAAAAAAAAAAAAAAAA=="
++        },
++        {
++          "id": "GX20",
++          "unk04": 100,
++          "data": "AAAAAAAAAAAAAAAA"
++        },
++        {
++          "id": "GX22",
++          "unk04": 100,
++          "data": "AAAAAAAAAAAAAAAA"
++        },
++        {
++          "id": "GX24",
++          "unk04": 100,
++          "data": "AAAAAAAAAAAAAAAA"
++        },
++        {
++          "id": "GX26",
++          "unk04": 100,
++          "data": "AAAAAAAAAAAAAAAA"
++        },
++        {
++          "id": "GX30",
++          "unk04": 100,
++          "data": "AAAAAAAAAAAAAAAA"
++        }
++      ]
+     }
+   ],
+   "materials2": [
+@@ -272,8 +319,8 @@
+     {
+       "index": 1,
+       "name": "02 - Default",
+-      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN].mtd",
+-      "gxIndex": 0,
++      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_p.mtd",
++      "gxIndex": 1,
+       "materialIndex": 0,
+       "textures": [
+         {
+@@ -346,8 +393,8 @@
+     {
+       "index": 2,
+       "name": "Material #12",
+-      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN].mtd",
+-      "gxIndex": 0,
++      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_p.mtd",
++      "gxIndex": 1,
+       "materialIndex": 0,
+       "textures": [
+         {
+@@ -420,8 +467,8 @@
+     {
+       "index": 3,
+       "name": "Material #13",
+-      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN].mtd",
+-      "gxIndex": 0,
++      "mtd": "N:\\SPRJ\\data\\Material\\mtd\\map\\M[ARSN]_p.mtd",
++      "gxIndex": 1,
+       "materialIndex": 0,
+       "textures": [
+         {
+@@ -577,7 +624,7 @@
+         {
+           "flags": 0,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             660,
+@@ -2520,7 +2567,7 @@
+         {
+           "flags": 16777216,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             143,
+@@ -3677,7 +3724,7 @@
+         {
+           "flags": 33554432,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             0,
+@@ -66930,7 +66977,7 @@
+         {
+           "flags": 0,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             5,
+@@ -70823,7 +70870,7 @@
+         {
+           "flags": 16777216,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             5,
+@@ -73150,7 +73197,7 @@
+         {
+           "flags": 33554432,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             0,
+@@ -141206,7 +141253,7 @@
+         {
+           "flags": 0,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             3,
+@@ -148756,7 +148803,7 @@
+         {
+           "flags": 16777216,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             3,
+@@ -153258,7 +153305,7 @@
+         {
+           "flags": 33554432,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             3,
+@@ -417091,7 +417138,7 @@
+         {
+           "flags": 0,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             69,
+@@ -418254,7 +418301,7 @@
+         {
+           "flags": 16777216,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             69,
+@@ -418952,7 +418999,7 @@
+         {
+           "flags": 33554432,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             0,
+@@ -449895,7 +449942,7 @@
+         {
+           "flags": 0,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             46,
+@@ -450002,7 +450049,7 @@
+         {
+           "flags": 16777216,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             18,
+@@ -450082,7 +450129,7 @@
+         {
+           "flags": 33554432,
+           "triangleStrip": false,
+-          "cullBackfaces": true,
++          "cullBackfaces": false,
+           "unk06": 1,
+           "indices": [
+             0,

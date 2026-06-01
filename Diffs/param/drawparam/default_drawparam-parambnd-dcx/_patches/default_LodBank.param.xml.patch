@@ -1,0 +1,151 @@
+diff --git a/default_drawparam-parambnd-dcx/default_LodBank.param.xml b/default_drawparam-parambnd-dcx/default_LodBank.param.xml
+index 80d088e..65c330a 100644
+--- a/default_drawparam-parambnd-dcx/default_LodBank.param.xml
++++ b/default_drawparam-parambnd-dcx/default_LodBank.param.xml
+@@ -19,76 +19,76 @@
+     <formatVersion>201</formatVersion>
+   </paramdef>
+   <fields>
+-    <field name="lv01_BorderDist" type="f32" arraylength="1" bitsize="-1" sortid="1" unkb8="" unkc0="" defaultValue="5" />
+-    <field name="lv01_PlayDist" type="f32" arraylength="1" bitsize="-1" sortid="2" unkb8="" unkc0="" defaultValue="1" />
+-    <field name="lv12_BorderDist" type="f32" arraylength="1" bitsize="-1" sortid="3" unkb8="" unkc0="" defaultValue="20" />
+-    <field name="lv12_PlayDist" type="f32" arraylength="1" bitsize="-1" sortid="4" unkb8="" unkc0="" defaultValue="2" />
+-    <field name="textureLod" type="u32" arraylength="1" bitsize="1" sortid="5" unkb8="" unkc0="" defaultValue="1" />
++    <field name="lv01_BorderDist" type="f32" arraylength="1" bitsize="-1" sortid="1" unkb8="" unkc0="" defaultValue="9998" />
++    <field name="lv01_PlayDist" type="f32" arraylength="1" bitsize="-1" sortid="2" unkb8="" unkc0="" defaultValue="1000" />
++    <field name="lv12_BorderDist" type="f32" arraylength="1" bitsize="-1" sortid="3" unkb8="" unkc0="" defaultValue="9999" />
++    <field name="lv12_PlayDist" type="f32" arraylength="1" bitsize="-1" sortid="4" unkb8="" unkc0="" defaultValue="2000" />
++    <field name="textureLod" type="u32" arraylength="1" bitsize="1" sortid="5" unkb8="" unkc0="" defaultValue="0" />
+   </fields>
+   <rows>
+-    <row id="0" name="デフォルト設定" lv01_BorderDist="15" lv01_PlayDist="1" lv12_BorderDist="30" lv12_PlayDist="2" textureLod="1" />
+-    <row id="1" name="L0メイン" lv01_BorderDist="40" lv01_PlayDist="1" lv12_BorderDist="1000" lv12_PlayDist="2" textureLod="1" />
+-    <row id="2" name="L1メイン" lv01_BorderDist="15" lv01_PlayDist="1" lv12_BorderDist="1000" lv12_PlayDist="2" textureLod="1" />
+-    <row id="3" name="LODしない" lv01_BorderDist="1000" lv01_PlayDist="1" lv12_BorderDist="2000" lv12_PlayDist="2" textureLod="1" />
+-    <row id="4" name="デフォルト設定(tex_LODなし）" lv01_BorderDist="15" lv01_PlayDist="1" lv12_BorderDist="30" lv12_PlayDist="2" textureLod="0" />
+-    <row id="5" name="L0メイン　(tex_LODなし）" lv01_BorderDist="40" lv01_PlayDist="1" lv12_BorderDist="1000" lv12_PlayDist="2" textureLod="0" />
+-    <row id="6" name="L1メイン　(tex_LODなし）" lv01_BorderDist="15" lv01_PlayDist="1" lv12_BorderDist="1000" lv12_PlayDist="2" textureLod="0" />
+-    <row id="7" name="LODしない(tex_LODなし）" lv01_BorderDist="1000" lv01_PlayDist="1" lv12_BorderDist="2000" lv12_PlayDist="2" textureLod="0" />
+-    <row id="8" name="m22_L1メイン" lv01_BorderDist="10" lv01_PlayDist="1" lv12_BorderDist="25" lv12_PlayDist="2" textureLod="1" />
+-    <row id="9" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="10" name="キャラ用 小型(1.5m以下)" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="10" lv12_PlayDist="2" textureLod="0" />
+-    <row id="11" name="キャラ用 中型(2m以下)" lv01_BorderDist="10" lv01_PlayDist="1" lv12_BorderDist="15" lv12_PlayDist="2" textureLod="0" />
+-    <row id="12" name="キャラ用 大型(3m以下)" lv01_BorderDist="10" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="0" />
+-    <row id="13" name="キャラ用 特大(5m以下)" lv01_BorderDist="15" lv01_PlayDist="1" lv12_BorderDist="25" lv12_PlayDist="2" textureLod="0" />
+-    <row id="14" name="キャラ用 巨大(10m以下)" lv01_BorderDist="20" lv01_PlayDist="2" lv12_BorderDist="40" lv12_PlayDist="2" textureLod="0" />
+-    <row id="15" name="キャラ用 要塞(30m以下)" lv01_BorderDist="30" lv01_PlayDist="2" lv12_BorderDist="100" lv12_PlayDist="4" textureLod="0" />
+-    <row id="16" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="0" />
+-    <row id="17" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="0" />
+-    <row id="18" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="10" lv12_PlayDist="2" textureLod="0" />
+-    <row id="19" name="キャラ用 LODなし" lv01_BorderDist="9998" lv01_PlayDist="10" lv12_BorderDist="9999" lv12_PlayDist="10" textureLod="0" />
+-    <row id="20" name="m24_01 c2630 群衆A" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="10" lv12_PlayDist="2" textureLod="0" />
+-    <row id="21" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="0" />
+-    <row id="22" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="0" />
+-    <row id="23" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="0" />
+-    <row id="24" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="0" />
+-    <row id="25" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="0" />
+-    <row id="26" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="0" />
+-    <row id="27" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="0" />
+-    <row id="28" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="0" />
+-    <row id="29" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="0" />
+-    <row id="30" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="31" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="32" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="33" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="34" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="35" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="36" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="37" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="38" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="39" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="40" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="41" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="42" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="43" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="44" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="45" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="46" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="47" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="48" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="49" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="50" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="51" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="52" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="53" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="54" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="55" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="56" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="57" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="58" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="59" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="60" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="61" lv01_BorderDist="5" lv01_PlayDist="1" lv12_BorderDist="20" lv12_PlayDist="2" textureLod="1" />
+-    <row id="62" name="キャラ用 NPC マルチプレイヤー" lv01_BorderDist="3" lv01_PlayDist="1" lv12_BorderDist="10" lv12_PlayDist="1" textureLod="0" />
+-    <row id="63" name="LODモデルに切り替わらない(ポリ劇用)" lv01_BorderDist="9998" lv01_PlayDist="10" lv12_BorderDist="9999" lv12_PlayDist="10" textureLod="1" />
++    <row id="0" name="デフォルト設定" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="1" name=" l0メイン" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="2" name=" l1メイン" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="3" name=" lODしない" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="4" name="デフォルト設定(tex_LODなし）" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="5" name=" l0メイン　(tex_LODなし）" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="6" name=" l1メイン　(tex_LODなし）" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="7" name=" lODしない(tex_LODなし）" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="8" name="m22_L1メイン" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="9" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="10" name="キャラ用 小型(1.5m以下)" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="11" name="キャラ用 中型(2m以下)" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="12" name="キャラ用 大型(3m以下)" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="13" name="キャラ用 特大(5m以下)" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="14" name="キャラ用 巨大(10m以下)" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="15" name="キャラ用 要塞(30m以下)" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="16" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="17" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="18" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="19" name="キャラ用 LODなし" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="20" name="m24_01 c2630 群衆A" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="21" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="22" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="23" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="24" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="25" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="26" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="27" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="28" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="29" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="30" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="31" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="32" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="33" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="34" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="35" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="36" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="37" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="38" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="39" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="40" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="41" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="42" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="43" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="44" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="45" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="46" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="47" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="48" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="49" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="50" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="51" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="52" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="53" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="54" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="55" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="56" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="57" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="58" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="59" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="60" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="61" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="62" name="キャラ用 NPC マルチプレイヤー" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
++    <row id="63" name=" lODモデルに切り替わらない(ポリ劇用)" lv01_BorderDist="9998" lv01_PlayDist="1000" lv12_BorderDist="9999" lv12_PlayDist="2000" textureLod="0" />
+   </rows>
+ </param>
+\ No newline at end of file

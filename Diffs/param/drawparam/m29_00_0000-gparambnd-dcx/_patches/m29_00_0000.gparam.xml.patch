@@ -1,0 +1,348 @@
+diff --git a/m29_00_0000-gparambnd-dcx/m29_00_0000.gparam.xml b/m29_00_0000-gparambnd-dcx/m29_00_0000.gparam.xml
+index d277bce..4a17b63 100644
+--- a/m29_00_0000-gparambnd-dcx/m29_00_0000.gparam.xml
++++ b/m29_00_0000-gparambnd-dcx/m29_00_0000.gparam.xml
+@@ -709,7 +709,7 @@
+       </param>
+       <param name1="Env Map: ColorScale" name2="EnvMap:ColorScale" type="Float">
+         <value id="0">1</value>
+-        <value id="10">0</value>
++        <value id="10">1</value>
+       </param>
+     </group>
+     <group name1="SSAO Editor" name2="SSAO ">
+@@ -780,13 +780,13 @@
+         <value id="0">0</value>
+       </param>
+       <param name1="SSAO - Edit-Blur Radius 0" name2="Blur Radius 0" type="Float">
+-        <value id="0">0</value>
++        <value id="0">3</value>
+       </param>
+       <param name1="SSAO - Edit-Blur Radius 1" name2="Blur Radius 1" type="Float">
+-        <value id="0">0</value>
++        <value id="0">2</value>
+       </param>
+       <param name1="SSAO - Edit-Blur Radius 2" name2="Blur Radius 2" type="Float">
+-        <value id="0">0</value>
++        <value id="0">1</value>
+       </param>
+       <param name1="SSAO - Edit-Final Blur Radius" name2="Final Blur Radius" type="Float">
+         <value id="0">3</value>
+@@ -805,9 +805,9 @@
+         <comment>コズミック用</comment>
+       </comments>
+       <param name1="Yebis-Use DepthTexture" name2="Use DepthTexture" type="IntA">
+-        <value id="0">0</value>
+-        <value id="2000">0</value>
+-        <value id="4000">0</value>
++        <value id="0">1</value>
++        <value id="2000">1</value>
++        <value id="4000">1</value>
+       </param>
+       <param name1="Yebis-Enable LensDistortion" name2="Enable LensDistortion" type="IntA">
+         <value id="0">1</value>
+@@ -900,29 +900,29 @@
+         <value id="4000">3</value>
+       </param>
+       <param name1="SceneSetting-  LightCollect- Auto Compute Enable" name2="Auto Compute Enable" type="BoolA">
+-        <value id="0">False</value>
+-        <value id="2000">False</value>
+-        <value id="4000">False</value>
++        <value id="0">True</value>
++        <value id="2000">True</value>
++        <value id="4000">True</value>
+       </param>
+       <param name1="SceneSetting-  LightCollect- BaseDist" name2="BaseDist" type="Float">
+-        <value id="0">10</value>
+-        <value id="2000">10</value>
+-        <value id="4000">10</value>
++        <value id="0">100</value>
++        <value id="2000">100</value>
++        <value id="4000">100</value>
+       </param>
+       <param name1="SceneSetting-  LightCollect-DistScaler" name2="DistScaler" type="Float">
+-        <value id="0">10</value>
+-        <value id="2000">10</value>
+-        <value id="4000">10</value>
++        <value id="0">100</value>
++        <value id="2000">100</value>
++        <value id="4000">100</value>
+       </param>
+       <param name1="SceneSetting-  LightCollect-DistMax" name2="DistMax" type="Float">
+-        <value id="0">130</value>
+-        <value id="2000">130</value>
+-        <value id="4000">130</value>
++        <value id="0">1300</value>
++        <value id="2000">1300</value>
++        <value id="4000">1300</value>
+       </param>
+       <param name1="SceneSetting-  ReflectScene Assign DynamicLight" name2="ReflectScene Assign DynamicLight" type="BoolA">
+-        <value id="0">False</value>
+-        <value id="2000">False</value>
+-        <value id="4000">False</value>
++        <value id="0">True</value>
++        <value id="2000">True</value>
++        <value id="4000">True</value>
+       </param>
+     </group>
+     <group name1="Tone Map[Yebis]" name2="Tone Map">
+@@ -937,7 +937,7 @@
+         <value id="4000">3</value>
+       </param>
+       <param name1="Yebis-Gamma" name2="Gamma" type="Float">
+-        <value id="0">2.2</value>
++        <value id="0">2</value>
+         <value id="2000">2.2</value>
+         <value id="4000">2.2</value>
+       </param>
+@@ -977,14 +977,14 @@
+         <value id="4000">1</value>
+       </param>
+       <param name1="Yebis-AutoExposure" name2="AutoExposure" type="IntA">
+-        <value id="0">0</value>
+-        <value id="2000">0</value>
+-        <value id="4000">0</value>
++        <value id="0">1</value>
++        <value id="2000">1</value>
++        <value id="4000">1</value>
+       </param>
+       <param name1="Yebis-DelayFrame" name2="DelayFrame" type="Float">
+-        <value id="0">0.2</value>
+-        <value id="2000">0.2</value>
+-        <value id="4000">0.2</value>
++        <value id="0">0.01</value>
++        <value id="2000">0.01</value>
++        <value id="4000">0.01</value>
+       </param>
+       <param name1="Yebis-MiddleGray" name2="MiddleGray" type="Float">
+         <value id="0">0.18</value>
+@@ -997,9 +997,9 @@
+         <value id="4000">1</value>
+       </param>
+       <param name1="Yebis-MinExposure" name2="MinExposure" type="Float">
+-        <value id="0">0.1</value>
+-        <value id="2000">0.1</value>
+-        <value id="4000">0.1</value>
++        <value id="0">2</value>
++        <value id="2000">2</value>
++        <value id="4000">2</value>
+       </param>
+       <param name1="Yebis-MaxExposure" name2="MaxExposure" type="Float">
+         <value id="0">10</value>
+@@ -1062,9 +1062,9 @@
+         <value id="4000">1</value>
+       </param>
+       <param name1="Yebis-Vignette Power" name2="Vignette Power" type="Float">
+-        <value id="0">0</value>
+-        <value id="2000">0</value>
+-        <value id="4000">0</value>
++        <value id="0">0.3</value>
++        <value id="2000">0.3</value>
++        <value id="4000">0.3</value>
+       </param>
+       <param name1="Yebis-VignetteFovDependence" name2="VignetteFovDependence" type="Float">
+         <value id="0">0</value>
+@@ -1077,9 +1077,9 @@
+         <value id="4000">1</value>
+       </param>
+       <param name1="Yebis-WaveSample" name2="WaveSample" type="IntA">
+-        <value id="0">3</value>
+-        <value id="2000">3</value>
+-        <value id="4000">3</value>
++        <value id="0">5</value>
++        <value id="2000">5</value>
++        <value id="4000">5</value>
+       </param>
+       <param name1="Yebis-ToneLateralDispersion[0]" name2="ToneLateralDispersion[0]" type="Float">
+         <value id="0">0.006</value>
+@@ -1204,14 +1204,14 @@
+         <value id="4000">0.2</value>
+       </param>
+       <param name1="Yebis-GlareSamplingThreshold" name2="GlareSamplingThreshold" type="Float">
+-        <value id="0">0.01</value>
+-        <value id="2000">0.01</value>
+-        <value id="4000">0.01</value>
++        <value id="0">0.08</value>
++        <value id="2000">0.08</value>
++        <value id="4000">0.08</value>
+       </param>
+       <param name1="Yebis-RemapFactor" name2="RemapFactor" type="Float">
+-        <value id="0">0.5</value>
+-        <value id="2000">0.5</value>
+-        <value id="4000">0.5</value>
++        <value id="0">0.6</value>
++        <value id="2000">0.6</value>
++        <value id="4000">0.6</value>
+       </param>
+       <param name1="Yebis-GlareStarLengthFovDependence" name2="GlareStarLengthFovDependence" type="Float">
+         <value id="0">0.5</value>
+@@ -1363,11 +1363,6 @@
+         <value id="2000">1 1 1 1</value>
+         <value id="4000">1 1 1 1</value>
+       </param>
+-      <param name1="Yebis-AnamorphicFlareColor" name2="AnamorphicFlareColor" type="Float4">
+-        <value id="0">1 1 1 1</value>
+-        <value id="2000">1 1 1 1</value>
+-        <value id="4000">1 1 1 1</value>
+-      </param>
+       <param name1="Gs Presents【Bloom】 Enable" name2="Enable" type="IntA">
+         <value id="0">0</value>
+         <value id="2000">0</value>
+@@ -1414,7 +1409,7 @@
+         <comment />
+       </comments>
+       <param name1="Yebis-LightShaft Enable" name2="Enable" type="IntA">
+-        <value id="0">0</value>
++        <value id="0">1</value>
+       </param>
+       <param name1="Yebis-ColorScale" name2="ColorScale" type="Float4">
+         <value id="0">1 1 1 1</value>
+@@ -1464,7 +1459,7 @@
+         <comment />
+       </comments>
+       <param name1="Yebis-DepthOfField:Enable" name2="Enable" type="IntA">
+-        <value id="0">0</value>
++        <value id="0">1</value>
+       </param>
+       <param name1="Yebis-ApertuerF" name2="ApertuerF" type="Float">
+         <value id="0">5.6</value>
+@@ -1574,7 +1569,7 @@
+         <value id="0">1</value>
+       </param>
+       <param name1="AntiAlias - AntiAliasType" name2="AntiAliasType" type="IntA">
+-        <value id="0">4</value>
++        <value id="0">2</value>
+       </param>
+       <param name1="AntiAlias - fFxaaAlpha" name2="FxaaAlpha" type="Float">
+         <value id="0">1</value>
+@@ -1589,10 +1584,10 @@
+         <value id="0">8</value>
+       </param>
+       <param name1="AntiAlias - DlaaThreshold" name2="DlaaThreshold" type="Float">
+-        <value id="0">0.099999994</value>
++        <value id="0">0.1</value>
+       </param>
+       <param name1="AntiAlias - DlaaRamda" name2="DlaaRamda" type="Float">
+-        <value id="0">2.44</value>
++        <value id="0">3</value>
+       </param>
+       <param name1="AntiAlias - DlaaEpsilon" name2="DlaaEpsilon" type="Float">
+         <value id="0">0.25</value>
+@@ -1609,7 +1604,7 @@
+         <value id="0">0.095</value>
+       </param>
+       <param name1="Yebis-NumBaseSamples" name2="NumBaseSamples" type="IntA">
+-        <value id="0">3</value>
++        <value id="0">5</value>
+       </param>
+       <param name1="Yebis-MaxBlurLength" name2="MaxBlurLength" type="Float">
+         <value id="0">0.2</value>
+@@ -1618,7 +1613,7 @@
+         <value id="0">4</value>
+       </param>
+       <param name1="Yebis-MaxRecurrences" name2="MaxRecurrences" type="IntA">
+-        <value id="0">2</value>
++        <value id="0">3</value>
+       </param>
+       <param name1="Yebis-SampleInterleaved" name2="SampleInterleaved" type="Float">
+         <value id="0">1</value>
+@@ -1677,7 +1672,7 @@
+         <value id="4000">1</value>
+       </param>
+       <param name1="Yebis-LutSourceId" name2="LutSourceId" type="IntA">
+-        <value id="0">0</value>
++        <value id="0">3</value>
+         <value id="2000">3</value>
+         <value id="4000">1</value>
+       </param>
+@@ -1696,19 +1691,19 @@
+         <value id="0">0.1</value>
+       </param>
+       <param name1="ShadowParam - Shadow: Far Fade Start" name2="Far Fade Start" type="Float">
+-        <value id="0">2</value>
++        <value id="0">150</value>
+       </param>
+       <param name1="ShadowParam - Shadow: Far Fade Dist" name2="Far Fade Dist" type="Float">
+-        <value id="0">10</value>
++        <value id="0">100</value>
+       </param>
+       <param name1="ShadowParam - Shadow: Cascade Dist 0-&gt;1" name2="Cascade Dist 0-&gt;1" type="Float">
+-        <value id="0">2</value>
++        <value id="0">20</value>
+       </param>
+       <param name1="ShadowParam - Shadow: Cascade Dist 1-&gt;2" name2="Cascade Dist 1-&gt;2" type="Float">
+-        <value id="0">8</value>
++        <value id="0">80</value>
+       </param>
+       <param name1="ShadowParam - Shadow: Cascade Dist 2-&gt;3" name2="Cascade Dist 2-&gt;3" type="Float">
+-        <value id="0">15</value>
++        <value id="0">150</value>
+       </param>
+       <param name1="ShadowParam - Shadow: Shadow Map Mode" name2="Shadow Map Mode" type="IntA">
+         <value id="0">1</value>
+@@ -1720,7 +1715,7 @@
+         <value id="0">-0.001</value>
+       </param>
+       <param name1="ShadowParam - Depth Offset(forPSM)" name2="Depth Offset(forPSM)" type="Float">
+-        <value id="0">0</value>
++        <value id="0">-0.001</value>
+       </param>
+       <param name1="ShadowParam - CaliburateFarRate(forPSM)" name2="CaliburateFarRate(forPSM)" type="Float">
+         <value id="0">0.7</value>
+@@ -1756,10 +1751,10 @@
+         <value id="0">-0.085</value>
+       </param>
+       <param name1="ShadowParam - Blur Count" name2="Blur Count" type="IntB">
+-        <value id="0">1</value>
++        <value id="0">3</value>
+       </param>
+       <param name1="ShadowParam - Blur Radius" name2="Blur Radius" type="Float">
+-        <value id="0">2</value>
++        <value id="0">3</value>
+       </param>
+       <param name1="Directional Shadow Color" name2="Shadow Color" type="Byte4">
+         <value id="0">13 0B 00 FF</value>
+@@ -1795,11 +1790,21 @@
+       </param>
+     </group>
+     <group name1="DominantLightMap:Editor" name2="Dominant Light">
+-      <comments />
+-      <param name1="Dominant Param  Dominant Sharpness Min Value" name2="Dominant Sharpness Min Value" type="Float" />
+-      <param name1="Dominant Param  Dominant Sharpness Offset" name2="Dominant Sharpness Offset" type="Float" />
+-      <param name1="Dominant Param  Dominant Sharpness Exponant" name2="Dominant Sharpness Exponant" type="Float" />
+-      <param name1="Dominant Param  Dominant Sharpness RGB Scale" name2="Dominant RGB Scale" type="Float" />
++      <comments>
++        <comment />
++      </comments>
++      <param name1="Dominant Param  Dominant Sharpness Min Value" name2="Dominant Sharpness Min Value" type="Float">
++        <value id="0">0.5</value>
++      </param>
++      <param name1="Dominant Param  Dominant Sharpness Offset" name2="Dominant Sharpness Offset" type="Float">
++        <value id="0">1</value>
++      </param>
++      <param name1="Dominant Param  Dominant Sharpness Exponant" name2="Dominant Sharpness Exponant" type="Float">
++        <value id="0">1.25</value>
++      </param>
++      <param name1="Dominant Param  Dominant Sharpness RGB Scale" name2="Dominant RGB Scale" type="Float">
++        <value id="0">1</value>
++      </param>
+     </group>
+     <group name1="SeaWave:Editor" name2="SeaWave ">
+       <comments>
+@@ -1970,13 +1975,13 @@
+         <value id="0">1</value>
+       </param>
+       <param name1="Glow Filter-Glow - BlurSampleScale" name2="BlurSampleScale" type="Float">
+-        <value id="0">15</value>
++        <value id="0">30</value>
+       </param>
+       <param name1="Glow Filter-Glow - Blur RgbScale" name2="Blur RgbScale" type="Float">
+-        <value id="0">5</value>
++        <value id="0">10</value>
+       </param>
+       <param name1="Glow Filter-Glow - Blur AlphaScale" name2="Blur AlphaScale" type="Float">
+-        <value id="0">3</value>
++        <value id="0">6</value>
+       </param>
+     </group>
+     <group name1="ColorParaffin Filter-Editor" name2="ColorParaffin Filter ">

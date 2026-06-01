@@ -1,0 +1,403 @@
+diff --git a/m32_00_0000-gparambnd-dcx/m32_00_0000.gparam.xml b/m32_00_0000-gparambnd-dcx/m32_00_0000.gparam.xml
+index 001cc42..92b3750 100644
+--- a/m32_00_0000-gparambnd-dcx/m32_00_0000.gparam.xml
++++ b/m32_00_0000-gparambnd-dcx/m32_00_0000.gparam.xml
+@@ -21,9 +21,9 @@
+         <comment>SFX　FOG用</comment>
+       </comments>
+       <param name1="Directional Light Angle0" name2="Angle" type="Float2">
+-        <value id="0">-0.523599 -2.513274</value>
++        <value id="0">-0.524 -1.85</value>
+         <value id="1">0 0</value>
+-        <value id="10">-0.523599 -2.513274</value>
++        <value id="10">-0.524 -1.85</value>
+         <value id="11">-1.256637 -0.069813</value>
+         <value id="27">-1.186824 -0.698132</value>
+         <value id="40">-1.570796 0.558505</value>
+@@ -33,10 +33,10 @@
+         <value id="32000">-0.523599 -2.513274</value>
+       </param>
+       <param name1="Directional Light DiffColor0" name2="DiffColor" type="Float4">
+-        <value id="0">0.631746 0.806349 1 0.660317</value>
++        <value id="0">0.632 0.806 1 2</value>
+         <value id="1">0 0 0 0</value>
+-        <value id="10">0.631746 0.806349 1 0.431746</value>
+-        <value id="11">1 0.879365 0.698413 0.533333</value>
++        <value id="10">0.632 0.806 1 2</value>
++        <value id="11">0.632 0.806 1 1</value>
+         <value id="27">0.556923 0.766154 1 0.664615</value>
+         <value id="40">0.631746 0.764706 1 0</value>
+         <value id="50">0.631746 0.806349 1 0.058622</value>
+@@ -45,10 +45,10 @@
+         <value id="32000">0.631746 0.806349 1 0.660317</value>
+       </param>
+       <param name1="Directional Light SpecColor0" name2="SpecColor" type="Float4">
+-        <value id="0">0.739683 0.850794 1 0.351734</value>
++        <value id="0">0.74 0.851 1 0.15</value>
+         <value id="1">0 0 0 0</value>
+         <value id="10">0.695238 0.822222 1 0.863492</value>
+-        <value id="11">1 0.898413 0.742857 0.507937</value>
++        <value id="11">1 0.898 0.743 0.35</value>
+         <value id="27">0.332308 0.433846 0.550769 0</value>
+         <value id="40">0.647059 0.768166 1 0.138408</value>
+         <value id="50">0.739683 0.850794 1 0</value>
+@@ -57,9 +57,9 @@
+         <value id="32000">0.739683 0.850794 1 0.351734</value>
+       </param>
+       <param name1="Directional Light Sharpness0" name2="Sharpness" type="Float">
+-        <value id="0">2</value>
++        <value id="0">100</value>
+         <value id="1">0</value>
+-        <value id="10">50</value>
++        <value id="10">100</value>
+         <value id="11">50</value>
+         <value id="27">50</value>
+         <value id="40">3.3</value>
+@@ -83,8 +83,8 @@
+       <param name1="Directional Light Angle1" name2="Angle" type="Float2">
+         <value id="0">-0.523599 -2.513274</value>
+         <value id="1">0 0</value>
+-        <value id="10">0.296706 2.216568</value>
+-        <value id="11">-0.244346 2.164208</value>
++        <value id="10">-0.524 -1.85</value>
++        <value id="11">-0.15 -1.85</value>
+         <value id="27">-1.570796 0.314159</value>
+         <value id="40">-0.279253 -2.513274</value>
+         <value id="50">-0.942478 0</value>
+@@ -93,10 +93,10 @@
+         <value id="32000">-0.523599 -2.513274</value>
+       </param>
+       <param name1="Directional Light DiffColor1" name2="DiffColor" type="Float4">
+-        <value id="0">0.622222 0.726984 1 0.156326</value>
++        <value id="0">0.622 0.727 1 0.15</value>
+         <value id="1">0 0 0 0</value>
+-        <value id="10">0.622222 0.688889 1 0.228571</value>
+-        <value id="11">0.622222 0.666667 1 0.736508</value>
++        <value id="10">0.622 0.689 1 0.05</value>
++        <value id="11">0.622 0.667 1 0</value>
+         <value id="27">0.643077 0.833846 1 0.117245</value>
+         <value id="40">0.622222 0.726984 1 0</value>
+         <value id="50">0.643077 0.761905 1 1.4851</value>
+@@ -105,10 +105,10 @@
+         <value id="32000">0.622222 0.726984 1 0.156326</value>
+       </param>
+       <param name1="Directional Light SpecColor1" name2="SpecColor" type="Float4">
+-        <value id="0">0.568254 0.71746 1 0.312653</value>
++        <value id="0">0.568 0.717 1 0.02</value>
+         <value id="1">0 0 0 0</value>
+-        <value id="10">0.657143 0.825397 1 0.55873</value>
+-        <value id="11">0.657143 0.768254 1 0.279365</value>
++        <value id="10">0.657 0.825 1 0.1</value>
++        <value id="11">0.657 0.768 1 0</value>
+         <value id="27">0 0 0 0</value>
+         <value id="40">0.568254 0.71746 1 0.110727</value>
+         <value id="50">0 0 0 0</value>
+@@ -117,7 +117,7 @@
+         <value id="32000">0.568254 0.71746 1 0.312653</value>
+       </param>
+       <param name1="Directional Light Sharpness1" name2="Sharpness" type="Float">
+-        <value id="0">3</value>
++        <value id="0">50</value>
+         <value id="1">0</value>
+         <value id="10">50</value>
+         <value id="11">50</value>
+@@ -144,7 +144,7 @@
+         <value id="0">-1.22173 1.815142</value>
+         <value id="1">0.785398 0</value>
+         <value id="10">0.785398 0</value>
+-        <value id="11">0.785398 0</value>
++        <value id="11">0 0</value>
+         <value id="27">0.785398 0</value>
+         <value id="40">-0.471239 -0.767945</value>
+         <value id="50">0.785398 0</value>
+@@ -333,13 +333,13 @@
+         <value id="32000">False</value>
+       </param>
+       <param name1="Directional Light  LightMask Influence" name2="LightMask Influence" type="Float">
+-        <value id="0">0.95</value>
+-        <value id="1">0.95</value>
+-        <value id="10">0.79999995</value>
+-        <value id="11">0.79999995</value>
+-        <value id="27">0.9</value>
+-        <value id="40">0.9</value>
+-        <value id="50">0.9</value>
++        <value id="0">0</value>
++        <value id="1">0</value>
++        <value id="10">0</value>
++        <value id="11">0</value>
++        <value id="27">0</value>
++        <value id="40">0</value>
++        <value id="50">0</value>
+         <value id="100">0</value>
+         <value id="20000">0</value>
+         <value id="32000">0</value>
+@@ -471,7 +471,7 @@
+         <value id="0">0</value>
+       </param>
+       <param name1="Env Map: ColorScale" name2="EnvMap:ColorScale" type="Float">
+-        <value id="0">0.5</value>
++        <value id="0">1</value>
+       </param>
+     </group>
+     <group name1="SSAO Editor" name2="SSAO ">
+@@ -500,10 +500,10 @@
+         <value id="0">True</value>
+       </param>
+       <param name1="SSAO - Edit-UseReProj" name2="UseReProj" type="BoolB">
+-        <value id="0">False</value>
++        <value id="0">True</value>
+       </param>
+       <param name1="SSAO - Edit-EnableUpScale" name2="EnableUpScale" type="BoolB">
+-        <value id="0">False</value>
++        <value id="0">True</value>
+       </param>
+       <param name1="SSAO - Edit-Ver2 Sample Offset" name2="Ver2 Sample Offset" type="Float">
+         <value id="0">4</value>
+@@ -542,13 +542,13 @@
+         <value id="0">0</value>
+       </param>
+       <param name1="SSAO - Edit-Blur Radius 0" name2="Blur Radius 0" type="Float">
+-        <value id="0">0</value>
++        <value id="0">3</value>
+       </param>
+       <param name1="SSAO - Edit-Blur Radius 1" name2="Blur Radius 1" type="Float">
+-        <value id="0">0</value>
++        <value id="0">2</value>
+       </param>
+       <param name1="SSAO - Edit-Blur Radius 2" name2="Blur Radius 2" type="Float">
+-        <value id="0">0</value>
++        <value id="0">1</value>
+       </param>
+       <param name1="SSAO - Edit-Final Blur Radius" name2="Final Blur Radius" type="Float">
+         <value id="0">3</value>
+@@ -565,7 +565,7 @@
+         <comment />
+       </comments>
+       <param name1="Yebis-Use DepthTexture" name2="Use DepthTexture" type="IntA">
+-        <value id="0">0</value>
++        <value id="0">1</value>
+       </param>
+       <param name1="Yebis-Enable LensDistortion" name2="Enable LensDistortion" type="IntA">
+         <value id="0">1</value>
+@@ -595,7 +595,7 @@
+         <value id="0">1</value>
+       </param>
+       <param name1="Yebis-Enable LightShaft" name2="Enable LightShaft" type="IntA">
+-        <value id="0">0</value>
++        <value id="0">1</value>
+       </param>
+       <param name1="Yebis-Enable Choromaticaberration" name2="Enable Choromaticaberration" type="IntA">
+         <value id="0">1</value>
+@@ -616,25 +616,25 @@
+         <value id="0">4</value>
+       </param>
+       <param name1="Yebis-Use GlareQuality" name2="GlareQuality" type="IntA">
+-        <value id="0">2</value>
++        <value id="0">0</value>
+       </param>
+       <param name1="Yebis-DepthOfFieldQuality" name2="DepthOfFieldQuality" type="IntA">
+-        <value id="0">5</value>
++        <value id="0">2</value>
+       </param>
+       <param name1="SceneSetting-  LightCollect- Auto Compute Enable" name2="Auto Compute Enable" type="BoolA">
+-        <value id="0">False</value>
++        <value id="0">True</value>
+       </param>
+       <param name1="SceneSetting-  LightCollect- BaseDist" name2="BaseDist" type="Float">
+-        <value id="0">10</value>
++        <value id="0">100</value>
+       </param>
+       <param name1="SceneSetting-  LightCollect-DistScaler" name2="DistScaler" type="Float">
+-        <value id="0">10</value>
++        <value id="0">100</value>
+       </param>
+       <param name1="SceneSetting-  LightCollect-DistMax" name2="DistMax" type="Float">
+-        <value id="0">130</value>
++        <value id="0">1300</value>
+       </param>
+       <param name1="SceneSetting-  ReflectScene Assign DynamicLight" name2="ReflectScene Assign DynamicLight" type="BoolA">
+-        <value id="0">False</value>
++        <value id="0">True</value>
+       </param>
+     </group>
+     <group name1="Tone Map[Yebis]" name2="Tone Map">
+@@ -663,12 +663,12 @@
+         <value id="10">0</value>
+       </param>
+       <param name1="Yebis-ColorH" name2="ColorH" type="Float">
+-        <value id="0">0</value>
+-        <value id="10">0</value>
++        <value id="0">1</value>
++        <value id="10">1</value>
+       </param>
+       <param name1="Yebis-ColorS" name2="ColorS" type="Float">
+         <value id="0">1</value>
+-        <value id="10">0.5</value>
++        <value id="10">1</value>
+       </param>
+       <param name1="Yebis-ColorV" name2="ColorV" type="Float">
+         <value id="0">1</value>
+@@ -683,8 +683,8 @@
+         <value id="10">0</value>
+       </param>
+       <param name1="Yebis-DelayFrame" name2="DelayFrame" type="Float">
+-        <value id="0">0.2</value>
+-        <value id="10">0.2</value>
++        <value id="0">0.01</value>
++        <value id="10">0.01</value>
+       </param>
+       <param name1="Yebis-MiddleGray" name2="MiddleGray" type="Float">
+         <value id="0">0.18</value>
+@@ -747,7 +747,7 @@
+         <value id="10">1</value>
+       </param>
+       <param name1="Yebis-Vignette Power" name2="Vignette Power" type="Float">
+-        <value id="0">0</value>
++        <value id="0">0.3</value>
+         <value id="10">0</value>
+       </param>
+       <param name1="Yebis-VignetteFovDependence" name2="VignetteFovDependence" type="Float">
+@@ -759,8 +759,8 @@
+         <value id="10">1</value>
+       </param>
+       <param name1="Yebis-WaveSample" name2="WaveSample" type="IntA">
+-        <value id="0">3</value>
+-        <value id="10">3</value>
++        <value id="0">5</value>
++        <value id="10">5</value>
+       </param>
+       <param name1="Yebis-ToneLateralDispersion[0]" name2="ToneLateralDispersion[0]" type="Float">
+         <value id="0">0.006</value>
+@@ -953,9 +953,6 @@
+       <param name1="Yebis-AnamorphicFlareColor" name2="AnamorphicFlareColor" type="Float4">
+         <value id="0">1 1 1 1</value>
+       </param>
+-      <param name1="Yebis-AnamorphicFlareColor" name2="AnamorphicFlareColor" type="Float4">
+-        <value id="0">1 1 1 1</value>
+-      </param>
+       <param name1="Gs Presents【Bloom】 Enable" name2="Enable" type="IntA">
+         <value id="0">0</value>
+       </param>
+@@ -986,7 +983,7 @@
+         <comment />
+       </comments>
+       <param name1="Yebis-LightShaft Enable" name2="Enable" type="IntA">
+-        <value id="0">0</value>
++        <value id="0">1</value>
+       </param>
+       <param name1="Yebis-ColorScale" name2="ColorScale" type="Float4">
+         <value id="0">1 1 1 1</value>
+@@ -1069,7 +1066,7 @@
+         <value id="0">1</value>
+       </param>
+       <param name1="Yebis-DofEdgeQuarity" name2="DofEdgeQuarity" type="IntA">
+-        <value id="0">2</value>
++        <value id="0">-1</value>
+       </param>
+       <param name1="Yebis-DofBackgroundMaskThreshold" name2="BackgroundMaskThreshold" type="Float">
+         <value id="0">0.1</value>
+@@ -1143,10 +1140,10 @@
+         <comment />
+       </comments>
+       <param name1="Yebis-Anti-Alias Enable" name2="Enable" type="IntA">
+-        <value id="0">0</value>
++        <value id="0">1</value>
+       </param>
+       <param name1="AntiAlias - AntiAliasType" name2="AntiAliasType" type="IntA">
+-        <value id="0">4</value>
++        <value id="0">2</value>
+       </param>
+       <param name1="AntiAlias - fFxaaAlpha" name2="FxaaAlpha" type="Float">
+         <value id="0">1</value>
+@@ -1164,7 +1161,7 @@
+         <value id="0">0.1</value>
+       </param>
+       <param name1="AntiAlias - DlaaRamda" name2="DlaaRamda" type="Float">
+-        <value id="0">5</value>
++        <value id="0">3</value>
+       </param>
+       <param name1="AntiAlias - DlaaEpsilon" name2="DlaaEpsilon" type="Float">
+         <value id="0">0.25</value>
+@@ -1190,7 +1187,7 @@
+         <value id="0">4</value>
+       </param>
+       <param name1="Yebis-MaxRecurrences" name2="MaxRecurrences" type="IntA">
+-        <value id="0">2</value>
++        <value id="0">3</value>
+       </param>
+       <param name1="Yebis-SampleInterleaved" name2="SampleInterleaved" type="Float">
+         <value id="0">1</value>
+@@ -1247,7 +1244,7 @@
+         <value id="10">1</value>
+       </param>
+       <param name1="Yebis-LutSourceId" name2="LutSourceId" type="IntA">
+-        <value id="0">1</value>
++        <value id="0">3</value>
+         <value id="10">3</value>
+       </param>
+     </group>
+@@ -1265,19 +1262,19 @@
+         <value id="0">0.1</value>
+       </param>
+       <param name1="ShadowParam - Shadow: Far Fade Start" name2="Far Fade Start" type="Float">
+-        <value id="0">2</value>
++        <value id="0">150</value>
+       </param>
+       <param name1="ShadowParam - Shadow: Far Fade Dist" name2="Far Fade Dist" type="Float">
+-        <value id="0">10</value>
++        <value id="0">100</value>
+       </param>
+       <param name1="ShadowParam - Shadow: Cascade Dist 0-&gt;1" name2="Cascade Dist 0-&gt;1" type="Float">
+-        <value id="0">2</value>
++        <value id="0">30</value>
+       </param>
+       <param name1="ShadowParam - Shadow: Cascade Dist 1-&gt;2" name2="Cascade Dist 1-&gt;2" type="Float">
+-        <value id="0">8</value>
++        <value id="0">80</value>
+       </param>
+       <param name1="ShadowParam - Shadow: Cascade Dist 2-&gt;3" name2="Cascade Dist 2-&gt;3" type="Float">
+-        <value id="0">15</value>
++        <value id="0">150</value>
+       </param>
+       <param name1="ShadowParam - Shadow: Shadow Map Mode" name2="Shadow Map Mode" type="IntA">
+         <value id="0">1</value>
+@@ -1289,7 +1286,7 @@
+         <value id="0">-0.001</value>
+       </param>
+       <param name1="ShadowParam - Depth Offset(forPSM)" name2="Depth Offset(forPSM)" type="Float">
+-        <value id="0">0</value>
++        <value id="0">-0.001</value>
+       </param>
+       <param name1="ShadowParam - CaliburateFarRate(forPSM)" name2="CaliburateFarRate(forPSM)" type="Float">
+         <value id="0">0.7</value>
+@@ -1298,7 +1295,7 @@
+         <value id="0">1</value>
+       </param>
+       <param name1="ShadowParam - Volume Depth" name2="Volume Depth" type="Float">
+-        <value id="0">100</value>
++        <value id="0">150</value>
+       </param>
+       <param name1="ShadowParam - Depth Smooth Compare" name2="Depth Smooth Compare" type="Float">
+         <value id="0">0.005</value>
+@@ -1325,10 +1322,10 @@
+         <value id="0">-0.085</value>
+       </param>
+       <param name1="ShadowParam - Blur Count" name2="Blur Count" type="IntB">
+-        <value id="0">2</value>
++        <value id="0">3</value>
+       </param>
+       <param name1="ShadowParam - Blur Radius" name2="Blur Radius" type="Float">
+-        <value id="0">2</value>
++        <value id="0">3</value>
+       </param>
+       <param name1="Directional Shadow Color" name2="Shadow Color" type="Byte4">
+         <value id="0">05 02 03 FC</value>
+@@ -1371,7 +1368,7 @@
+         <value id="0">0.5</value>
+       </param>
+       <param name1="Dominant Param  Dominant Sharpness Offset" name2="Dominant Sharpness Offset" type="Float">
+-        <value id="0">0.7</value>
++        <value id="0">1</value>
+       </param>
+       <param name1="Dominant Param  Dominant Sharpness Exponant" name2="Dominant Sharpness Exponant" type="Float">
+         <value id="0">1.25</value>
