@@ -319,7 +319,7 @@ Texture generation is the most expensive step. The tool supports CPU and GPU thr
 4. Run the launcher:
 
 ```text
-Launch-BBReborneDIYTool.bat
+Launch-BBReborneDIYTool.cmd
 ```
 
 or run manually:
