@@ -1,19 +1,15 @@
 # Default: let Git treat normal text files safely
 * text=auto
-
 # Windows launchers
 *.cmd text eol=crlf
 *.bat text eol=crlf
-
 # PowerShell scripts
 *.ps1 text eol=crlf
 *.psm1 text eol=crlf
 *.psd1 text eol=crlf
-
 # Git patches should stay LF
 *.patch text eol=lf
 *.diff text eol=lf
-
 # Source/config text files
 *.cs text eol=crlf
 *.csproj text eol=crlf
@@ -23,3 +19,5 @@
 *.param text eol=lf
 *.md text eol=lf
 *.txt text eol=lf
+*.btpb.patch filter=lfs diff=lfs merge=lfs -text
+*.btl.patch filter=lfs diff=lfs merge=lfs -text
