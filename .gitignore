@@ -3,12 +3,15 @@ ModdedFiles/
 Output/
 Build/
 dist/
-bin/
-obj/
 temp/
 tmp/
 logs/
 *.log
+
+# Build intermediates
+**/obj/
+**/bin/
+**/.vs/
 
 # Game dumps / extracted game data
 dvdroot_ps4/
@@ -19,17 +22,30 @@ old/
 _original/
 _originals/
 
-# Large downloaded tools / binaries
+# Third-party downloaded tools / binaries
 Tools/WitchyBND/
 Tools/ImageMagick/
 Tools/RealESRGAN/
 Tools/texconv/
+
+# Generic binary archives, ignored by default
 *.exe
 *.dll
 *.pdb
 *.zip
 *.7z
 *.rar
+
+# Keep precompiled helper tool outputs only
+!Tools/*JsonTool/bin/
+!Tools/*JsonTool/bin/Release/
+!Tools/*JsonTool/bin/Release/net9.0/
+!Tools/*JsonTool/bin/Release/net9.0/**
+
+!Tools/DCXTool/bin/
+!Tools/DCXTool/bin/Release/
+!Tools/DCXTool/bin/Release/net9.0/
+!Tools/DCXTool/bin/Release/net9.0/**
 
 # PowerShell/editor noise
 .vscode/
