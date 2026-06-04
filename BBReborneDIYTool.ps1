@@ -4191,6 +4191,32 @@ function Get-DirectExeFinalPath {
     return (Join-Path $dir $Tool.ExeName)
 }
 
+function Find-ToolExeInToolRoot {
+    param([Parameter(Mandatory)]$Tool)
+
+    if (-not (Test-ToolUsesToolRoot -Tool $Tool)) { return $null }
+
+    switch ($Tool.Kind) {
+        'DirectExe' {
+            $final = Get-DirectExeFinalPath -Tool $Tool
+            if (Test-Path -LiteralPath $final -PathType Leaf) { return $final }
+            return $null
+        }
+        'LocalExe' {
+            $final = Get-DirectExeFinalPath -Tool $Tool
+            if (Test-Path -LiteralPath $final -PathType Leaf) { return $final }
+            return $null
+        }
+        'ZipTool' {
+            $searchRoot = Get-ToolInstallDir -Tool $Tool
+            return (Find-FirstFile -Roots @($searchRoot) -Filter $Tool.ExeName)
+        }
+        default {
+            return $null
+        }
+    }
+}
+
 function Find-ToolExe {
     param([Parameter(Mandatory)]$Tool)
 
@@ -4204,18 +4230,13 @@ function Find-ToolExe {
             return (Find-ExecutableOnPath -Name $Tool.ExeName)
         }
         'DirectExe' {
-            $final = Get-DirectExeFinalPath -Tool $Tool
-            if (Test-Path -LiteralPath $final) { return $final }
-            return (Find-ExecutableOnPath -Name $Tool.ExeName)
+            return (Find-ToolExeInToolRoot -Tool $Tool)
         }
         'LocalExe' {
-            $final = Get-DirectExeFinalPath -Tool $Tool
-            if (Test-Path -LiteralPath $final) { return $final }
-            return $null
+            return (Find-ToolExeInToolRoot -Tool $Tool)
         }
         'ZipTool' {
-            $searchRoot = Get-ToolInstallDir -Tool $Tool
-            return (Find-FirstFile -Roots @($searchRoot) -Filter $Tool.ExeName)
+            return (Find-ToolExeInToolRoot -Tool $Tool)
         }
         default {
             return $null
@@ -4232,6 +4253,26 @@ function Set-RowStatus {
     $RowControls[$Tool.Key].Status.Text = $Status
 }
 
+function Set-ToolReadyStatus {
+    param(
+        [Parameter(Mandatory)]$Tool,
+        [Parameter(Mandatory)][string]$ExePath
+    )
+
+    if ($Tool.Kind -eq 'WingetRuntime') {
+        $versionText = Get-PwshVersionText -PwshPath $ExePath
+        if ($PSVersionTable.PSVersion.Major -ge 7) {
+            Set-RowStatus -Tool $Tool -Status "Ready / current $($PSVersionTable.PSVersion)"
+        } else {
+            Set-RowStatus -Tool $Tool -Status "Ready / installed $versionText"
+        }
+    } elseif ($Tool.Key -eq 'DOTNET9') {
+        Set-RowStatus -Tool $Tool -Status "Ready / $(Get-DotNet9VersionText -DotNetPath $ExePath)"
+    } else {
+        Set-RowStatus -Tool $Tool -Status 'Ready'
+    }
+}
+
 function Refresh-ToolRow {
     param([Parameter(Mandatory)]$Tool)
 
@@ -4239,38 +4280,47 @@ function Refresh-ToolRow {
     $payloadPath = Get-DownloadPayloadPath -Tool $Tool
     $row.Payload.Text = $payloadPath
 
-    $currentExe = $row.Exe.Text.Trim()
-    if ($currentExe -and (Test-Path -LiteralPath $currentExe)) {
-        if ($Tool.Kind -eq 'WingetRuntime') {
-            $versionText = Get-PwshVersionText -PwshPath $currentExe
-            if ($PSVersionTable.PSVersion.Major -ge 7) {
-                Set-RowStatus -Tool $Tool -Status "Ready / current $($PSVersionTable.PSVersion)"
-            } else {
-                Set-RowStatus -Tool $Tool -Status "Ready / installed $versionText"
-            }
-        } elseif ($Tool.Key -eq 'DOTNET9') {
-            Set-RowStatus -Tool $Tool -Status "Ready / $(Get-DotNet9VersionText -DotNetPath $currentExe)"
-        } else {
-            Set-RowStatus -Tool $Tool -Status 'Ready'
+    if (Test-ToolUsesToolRoot -Tool $Tool) {
+        $detectedInToolRoot = Find-ToolExeInToolRoot -Tool $Tool
+        if ($detectedInToolRoot) {
+            $row.Exe.Text = $detectedInToolRoot
+            Set-ToolReadyStatus -Tool $Tool -ExePath $detectedInToolRoot
+            return
         }
+
+        $row.Exe.Text = ''
+        switch ($Tool.Kind) {
+            'ZipTool' {
+                $zipPath = Get-DownloadPayloadPath -Tool $Tool
+                if (Test-Path -LiteralPath $zipPath -PathType Leaf) {
+                    Set-RowStatus -Tool $Tool -Status 'Downloaded / extract needed'
+                } else {
+                    Set-RowStatus -Tool $Tool -Status 'Missing'
+                }
+            }
+            'DirectExe' {
+                Set-RowStatus -Tool $Tool -Status 'Missing'
+            }
+            'LocalExe' {
+                Set-RowStatus -Tool $Tool -Status 'Missing local'
+            }
+            default {
+                Set-RowStatus -Tool $Tool -Status 'Missing'
+            }
+        }
+        return
+    }
+
+    $currentExe = $row.Exe.Text.Trim()
+    if ($currentExe -and (Test-Path -LiteralPath $currentExe -PathType Leaf)) {
+        Set-ToolReadyStatus -Tool $Tool -ExePath $currentExe
         return
     }
 
     $detectedExe = Find-ToolExe -Tool $Tool
     if ($detectedExe) {
         $row.Exe.Text = $detectedExe
-        if ($Tool.Kind -eq 'WingetRuntime') {
-            $versionText = Get-PwshVersionText -PwshPath $detectedExe
-            if ($PSVersionTable.PSVersion.Major -ge 7) {
-                Set-RowStatus -Tool $Tool -Status "Ready / current $($PSVersionTable.PSVersion)"
-            } else {
-                Set-RowStatus -Tool $Tool -Status "Ready / installed $versionText"
-            }
-        } elseif ($Tool.Key -eq 'DOTNET9') {
-            Set-RowStatus -Tool $Tool -Status "Ready / $(Get-DotNet9VersionText -DotNetPath $detectedExe)"
-        } else {
-            Set-RowStatus -Tool $Tool -Status 'Ready'
-        }
+        Set-ToolReadyStatus -Tool $Tool -ExePath $detectedExe
         return
     }
 
@@ -4323,6 +4373,49 @@ function Refresh-AllRows {
     Update-GameRootStatus | Out-Null
     foreach ($tool in $Tools) {
         Refresh-ToolRow -Tool $tool
+    }
+}
+
+function Test-RequiredToolsReady {
+    $missing = New-Object System.Collections.Generic.List[string]
+
+    foreach ($tool in $Tools) {
+        $exe = $null
+
+        if (Test-ToolUsesToolRoot -Tool $tool) {
+            $exe = Find-ToolExeInToolRoot -Tool $tool
+        } else {
+            $exe = $RowControls[$tool.Key].Exe.Text.Trim()
+            if (-not $exe -or -not (Test-Path -LiteralPath $exe -PathType Leaf)) {
+                $exe = Find-ToolExe -Tool $tool
+            }
+        }
+
+        if ($exe -and (Test-Path -LiteralPath $exe -PathType Leaf)) {
+            $RowControls[$tool.Key].Exe.Text = $exe
+            Set-ToolReadyStatus -Tool $tool -ExePath $exe
+        } else {
+            if (Test-ToolUsesToolRoot -Tool $tool) {
+                $expected = Get-DirectExeFinalPath -Tool $tool
+                if ($tool.Kind -eq 'ZipTool') { $expected = Join-Path (Get-ToolInstallDir -Tool $tool) $tool.ExeName }
+                [void]$missing.Add("$($tool.Label): expected under Tool Root, for example $expected")
+            } else {
+                [void]$missing.Add("$($tool.Label): executable not detected")
+            }
+        }
+    }
+
+    return [pscustomobject]@{
+        Ok      = ($missing.Count -eq 0)
+        Missing = [string[]]$missing.ToArray()
+    }
+}
+
+function Assert-RequiredToolsReady {
+    Refresh-AllRows
+    $validation = Test-RequiredToolsReady
+    if (-not $validation.Ok) {
+        throw ("Required tools are not ready:" + [Environment]::NewLine + ($validation.Missing -join [Environment]::NewLine))
     }
 }
 
@@ -4681,7 +4774,7 @@ function Load-PathFiles {
         return
     }
 
-     try {
+    try {
         $config = Get-Content -LiteralPath $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
 
         $configToolRoot = Split-Path -Parent $configPath
@@ -4710,7 +4803,7 @@ function Load-PathFiles {
         if ($config.tools) {
             foreach ($tool in $Tools) {
                 if (Test-ToolUsesToolRoot -Tool $tool) {
-                    $detectedFromToolRoot = Find-ToolExe -Tool $tool
+                    $detectedFromToolRoot = Find-ToolExeInToolRoot -Tool $tool
                     if ($detectedFromToolRoot) {
                         $RowControls[$tool.Key].Exe.Text = $detectedFromToolRoot
                         continue
@@ -4739,6 +4832,8 @@ function Save-PathFiles {
 
     $jsonPath = Join-Path $toolRoot 'BBReborneDIYTool.paths.json'
     $ps1Path = Join-Path $toolRoot 'BBReborneDIYTool.paths.ps1'
+
+    Assert-RequiredToolsReady
 
     $config = Get-PathConfig
     $config | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $jsonPath -Encoding UTF8
@@ -5412,9 +5507,9 @@ $TxtOutputRoot.Add_TextChanged({
         }
 
         foreach ($tool in ($Tools | Where-Object { $_.Kind -in @('ZipTool', 'DirectExe') })) {
-            $exe = Find-ToolExe -Tool $tool
+            $exe = Find-ToolExeInToolRoot -Tool $tool
             if ($exe) {
-                Write-UiLog "$($tool.Label): already detected, skipping download."
+                Write-UiLog "$($tool.Label): already detected under Tool Root, skipping download."
                 $RowControls[$tool.Key].Exe.Text = $exe
                 continue
             }
@@ -5428,9 +5523,9 @@ $TxtOutputRoot.Add_TextChanged({
         Install-BBReborneUpscalerModels
 
         foreach ($tool in ($Tools | Where-Object { $_.Kind -eq 'LocalExe' })) {
-            $exe = Find-ToolExe -Tool $tool
+            $exe = Find-ToolExeInToolRoot -Tool $tool
             if ($exe) {
-                Write-UiLog "$($tool.Label): local tool detected."
+                Write-UiLog "$($tool.Label): local tool detected under Tool Root."
                 $RowControls[$tool.Key].Exe.Text = $exe
                 Set-RowStatus -Tool $tool -Status 'Ready'
             } else {
@@ -5441,6 +5536,17 @@ $TxtOutputRoot.Add_TextChanged({
 
         Write-WitchyBndRecommendedSettings -Silent
         Refresh-AllRows
+
+        $toolValidation = Test-RequiredToolsReady
+        if (-not $toolValidation.Ok) {
+            foreach ($missingTool in $toolValidation.Missing) {
+                Write-UiLog "Missing required tool: $missingTool"
+            }
+            $TxtSetupAllStatus.Text = 'Missing required tools'
+            $TxtSetupAllStatus.Foreground = [System.Windows.Media.Brushes]::Orange
+            Write-UiLog 'Required tool setup incomplete; paths were not saved.'
+            return
+        }
 
         $gameRootStatus = Update-GameRootStatus
         if ($gameRootStatus.Ok) {
