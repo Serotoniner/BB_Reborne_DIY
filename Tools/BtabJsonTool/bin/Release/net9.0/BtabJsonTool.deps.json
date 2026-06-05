@@ -1,3 +1,89 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:5a395361333dadfb804dbc127b0333d3b6a412d4f5ee0f29cef1eeffe5dd3a87
-size 2544
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v9.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v9.0": {
+      "BtabJsonTool/1.0.0": {
+        "dependencies": {
+          "SoulsFormats": "1.0.0"
+        },
+        "runtime": {
+          "BtabJsonTool.dll": {}
+        }
+      },
+      "BouncyCastle.Cryptography/2.4.0": {
+        "runtime": {
+          "lib/net6.0/BouncyCastle.Cryptography.dll": {
+            "assemblyVersion": "2.0.0.0",
+            "fileVersion": "2.4.0.33771"
+          }
+        }
+      },
+      "DrSwizzler/1.1.1": {
+        "runtime": {
+          "lib/netstandard2.0/DrSwizzler.dll": {
+            "assemblyVersion": "1.1.1.0",
+            "fileVersion": "1.1.1.0"
+          }
+        }
+      },
+      "ZstdNet/1.4.5": {
+        "runtime": {
+          "lib/netstandard2.1/ZstdNet.dll": {
+            "assemblyVersion": "1.4.5.0",
+            "fileVersion": "1.4.5.0"
+          }
+        }
+      },
+      "SoulsFormats/1.0.0": {
+        "dependencies": {
+          "BouncyCastle.Cryptography": "2.4.0",
+          "DrSwizzler": "1.1.1",
+          "ZstdNet": "1.4.5"
+        },
+        "runtime": {
+          "SoulsFormats.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "BtabJsonTool/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "BouncyCastle.Cryptography/2.4.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-SwXsAV3sMvAU/Nn31pbjhWurYSjJ+/giI/0n6tCrYoupEK34iIHCuk3STAd9fx8yudM85KkLSVdn951vTng/vQ==",
+      "path": "bouncycastle.cryptography/2.4.0",
+      "hashPath": "bouncycastle.cryptography.2.4.0.nupkg.sha512"
+    },
+    "DrSwizzler/1.1.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-9zB7kjdI8CVxNXuMYkoNOr0xwIa9KGWQ/+A0ICAF9J1UQ8SbS8DgYebfSfMsr5JsaRM6PNH1JOSowjvdq/6XPA==",
+      "path": "drswizzler/1.1.1",
+      "hashPath": "drswizzler.1.1.1.nupkg.sha512"
+    },
+    "ZstdNet/1.4.5": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-fi9aP1QY3ZenIMUW1pxdSjku6lYAUjScrwfXSXT1qyKtTdLxOIzeBMe+w/hQm0vMsvQnjcFInByMrIT7AlXUHA==",
+      "path": "zstdnet/1.4.5",
+      "hashPath": "zstdnet.1.4.5.nupkg.sha512"
+    },
+    "SoulsFormats/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
