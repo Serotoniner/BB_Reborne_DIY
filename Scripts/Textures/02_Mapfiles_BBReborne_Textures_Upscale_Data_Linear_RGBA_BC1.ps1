@@ -16,6 +16,7 @@ param(
 [int]$ThrottleLimit = [int][Environment]::ProcessorCount -2,
 [int]$ProgressEvery = 10, # legacy (kept); progress bars are primary
 [switch]$DryRun,
+[switch]$NoUpscale,          # Set2 mode: keep treatments but final texture size remains 1x
 
 # Apply results back onto RootDir after processing completes (or apply existing OutRoot if nothing to build)
 [switch]$Apply,
@@ -32,6 +33,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 if ($ThrottleLimit -lt 1) { $ThrottleLimit = 1 }
+$Use1xNoUpscale = [bool]$NoUpscale
 
 trap {
 	Write-Host ""
@@ -482,16 +484,26 @@ if ($needBuild) {
 				if (-not $png1) { throw "Missing Png1Actual" }
 				
 				if ($_.IsBC1) {
-					# 2) Upscale 2x (linear-ish) for data-ish textures: keep RGB, no gamma surprises
+					# 2) Upscale 2x (linear-ish) for data-ish textures, or keep 1x when -NoUpscale is used: keep RGB, no gamma surprises
 					# --- CORE COMMAND (KEEP INTACT) ---
-					& $using:MagickExe $png1 -colorspace RGB -alpha on -filter Mitchell -resize 200% -strip $png2 2>&1 | Add-Content -LiteralPath $log
+					if ($using:Use1xNoUpscale) {
+						& $using:MagickExe $png1 -colorspace RGB -alpha on -filter Mitchell -strip $png2 2>&1 | Add-Content -LiteralPath $log
+					}
+					else {
+						& $using:MagickExe $png1 -colorspace RGB -alpha on -filter Mitchell -resize 200% -strip $png2 2>&1 | Add-Content -LiteralPath $log
+					}
 					if (-not (Test-Path -LiteralPath $png2)) { throw "magick did not produce PNG: $png2" }
 				}
 				elseif ($_.IsBC4) {
 					# BC4: treat as single-channel mask. Force grayscale pipeline and write DX9-style ATI1 header.
-					# 2) Upscale as grayscale (avoid channel mixing)
+					# 2) Upscale as grayscale, or keep 1x when -NoUpscale is used (avoid channel mixing)
 					# --- CORE COMMAND (KEEP INTACT) ---
-					& $using:MagickExe $png1 -alpha off -channel R -colorspace Gray -separate +channel -filter Triangle -resize 200% -define png:exclude-chunk=gAMA,cHRM,iCCP,sRGB -strip $png2 2>&1 | Add-Content -LiteralPath $log # -colorspace Gray messes it up but we are going to fix later
+					if ($using:Use1xNoUpscale) {
+						& $using:MagickExe $png1 -alpha off -channel R -colorspace Gray -separate +channel -filter Triangle -define png:exclude-chunk=gAMA,cHRM,iCCP,sRGB -strip $png2 2>&1 | Add-Content -LiteralPath $log # -colorspace Gray messes it up but we are going to fix later
+					}
+					else {
+						& $using:MagickExe $png1 -alpha off -channel R -colorspace Gray -separate +channel -filter Triangle -resize 200% -define png:exclude-chunk=gAMA,cHRM,iCCP,sRGB -strip $png2 2>&1 | Add-Content -LiteralPath $log # -colorspace Gray messes it up but we are going to fix later
+					}
 					if (-not (Test-Path -LiteralPath $png2)) { throw "magick did not produce PNG: $png2" }
 				}
 				else {

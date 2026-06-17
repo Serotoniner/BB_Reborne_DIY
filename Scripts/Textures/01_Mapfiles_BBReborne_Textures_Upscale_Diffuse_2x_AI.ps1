@@ -18,6 +18,7 @@ param(
 [int]$ThrottleLimit = 1,
 [int]$ProgressEvery = 10,       # legacy print frequency (kept, but progress bars are primary now)
 [switch]$DryRun,
+[switch]$NoUpscale,          # Set2 mode: keep treatments but final texture size remains 1x
 
 # Apply results back onto RootDir after processing completes (or apply existing OutRoot if nothing to build)
 [switch]$Apply,
@@ -35,6 +36,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 if ($ThrottleLimit -lt 1) { $ThrottleLimit = 1 }
+$Use1xNoUpscale = [bool]$NoUpscale
 
 trap {
 	Write-Host ""
@@ -497,16 +499,30 @@ if ($needBuild) {
 					#$imOut = & $using:MagickExe $png1 -alpha on -colorspace sRGB -define png:sRGB=intent=0 -define png:gAMA=0.45455 "PNG32:$png2" 2>&1
 					#$imOut | Add-Content -LiteralPath $log
 					
-					$imOut = & $using:MagickExe $png1 `
-					-alpha on `
-					-colorspace RGB `
-					-gamma 2.4 `
-					-filter Mitchell -resize "200%" `
-					-attenuate 0.06 +noise Gaussian `
-					-gaussian-blur 0x0.25 `
-					-ordered-dither o8x8,1 `
-					-gamma 0.454545 `
-					"PNG32:$png2" 2>&1
+					if ($using:Use1xNoUpscale) {
+						$imOut = & $using:MagickExe $png1 `
+						-alpha on `
+						-colorspace RGB `
+						-gamma 2.4 `
+						-filter Mitchell `
+						-attenuate 0.06 +noise Gaussian `
+						-gaussian-blur 0x0.25 `
+						-ordered-dither o8x8,1 `
+						-gamma 0.454545 `
+						"PNG32:$png2" 2>&1
+					}
+					else {
+						$imOut = & $using:MagickExe $png1 `
+						-alpha on `
+						-colorspace RGB `
+						-gamma 2.4 `
+						-filter Mitchell -resize "200%" `
+						-attenuate 0.06 +noise Gaussian `
+						-gaussian-blur 0x0.25 `
+						-ordered-dither o8x8,1 `
+						-gamma 0.454545 `
+						"PNG32:$png2" 2>&1
+					}
 					
 					#$imOut = & $using:MagickExe $png1 -alpha on -strip -set colorspace RGB -type TrueColorMatte "PNG32:$png2" 2>&1 #-filter Mitchell -resize "200%" -gaussian-blur 10x0
 					
@@ -580,8 +596,13 @@ if ($needBuild) {
 					#& $using:RealEsrganExe -i $png1 -o $png4 -n realisticrescaler -f png 2>&1 | Add-Content -LiteralPath $log
 					if (-not (Test-Path -LiteralPath $png4)) { throw "Real-ESRGAN did not produce PNG: $png4" }
 					
-					# Downscale 4x -> 2x with ImageMagick (log output)
-					$imOut = & $using:MagickExe $png4 -colorspace RGB -alpha on -filter Mitchell -resize "50%" -attenuate 0.06 +noise Gaussian $png2 2>&1 
+					# Downscale 4x -> 2x, or 4x -> 1x when -NoUpscale is used, with ImageMagick (log output)
+					if ($using:Use1xNoUpscale) {
+						$imOut = & $using:MagickExe $png4 -colorspace RGB -alpha on -filter Mitchell -resize "25%" -attenuate 0.06 +noise Gaussian $png2 2>&1 
+					}
+					else {
+						$imOut = & $using:MagickExe $png4 -colorspace RGB -alpha on -filter Mitchell -resize "50%" -attenuate 0.06 +noise Gaussian $png2 2>&1 
+					}
 					$imOut | Add-Content -LiteralPath $log
 					if ($LASTEXITCODE -ne 0) { throw "ImageMagick resize failed (exit $LASTEXITCODE)" }
 					if (-not (Test-Path -LiteralPath $png2)) { throw "Downscale did not produce PNG: $png2" }

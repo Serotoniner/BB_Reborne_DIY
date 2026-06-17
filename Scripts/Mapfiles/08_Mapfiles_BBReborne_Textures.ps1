@@ -57,7 +57,8 @@ param(
     [switch]$Keep,
     [switch]$NoApply,
     [switch]$RepackL,
-    [switch]$DryRun
+    [switch]$DryRun,
+    [switch]$NoUpscale
 )
 
 $PreRepackDeleteFolders = @{
@@ -250,11 +251,13 @@ function Invoke-TexturePipeline {
         if (-not $NoApply) { $applyArgs += '-Apply' }
         $keepArgs = @()
         if ($Keep) { $keepArgs += '-Keep' }
+        $noUpscaleArgs = @()
+        if ($NoUpscale) { $noUpscaleArgs += '-NoUpscale' }
 
-        $diffuseArgs = $commonArgs + @('-RealEsrganExe', $RealEsrganExe, '-ThrottleLimit', $GpuThrottleLimit) + $applyArgs + $keepArgs
+        $diffuseArgs = $commonArgs + @('-RealEsrganExe', $RealEsrganExe, '-ThrottleLimit', $GpuThrottleLimit) + $applyArgs + $keepArgs + $noUpscaleArgs
         Invoke-PwshScript -Label '2/7 Upscale diffuse' -ScriptPath $DiffuseScript -Args $diffuseArgs
 
-        $linearArgs = $commonArgs + $applyArgs + $keepArgs
+        $linearArgs = $commonArgs + $applyArgs + $keepArgs + $noUpscaleArgs
         Invoke-PwshScript -Label '3/7 Upscale linear' -ScriptPath $LinearScript -Args $linearArgs
 
         $heightArgs = $commonArgs + $Profile.HeightArgs + $applyArgs + $keepArgs

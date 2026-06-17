@@ -46,6 +46,7 @@
           - Param DefaultDrawparam
       - Lets the user choose which map rows and which per-map steps should run.
       - Provides TOTAL-row checkboxes that check/uncheck all enabled rows at once for each map step.
+      - Provides a No texture upscale toggle that passes -NoUpscale to the texture step, keeping treatments while targeting 1x textures.
       - Shows estimated time, elapsed time, completion status, and output folder hints.
       - Can hide map names by default to avoid spoilers.
       - Warns the user not to change focus while external tools are receiving automated input.
@@ -2527,6 +2528,7 @@ function New-MapRunnerScript {
     $outputRoot = $TxtOutputRoot.Text.Trim()
     $cpuThrottle = $TxtCpuThrottle.Text.Trim()
     $gpuThrottle = $TxtGpuThrottle.Text.Trim()
+    $noUpscaleTextures = ([bool]$ChkNoUpscaleTextures.IsChecked)
 
     $lines = New-Object System.Collections.Generic.List[string]
     $lines.Add('$ErrorActionPreference = ''Stop''')
@@ -2556,6 +2558,9 @@ function New-MapRunnerScript {
 
         if ($step.Id -eq '08') {
             $args += @('-GpuThrottle', $gpuThrottle)
+            if ($noUpscaleTextures) {
+                $args += '-NoUpscale'
+            }
         }
 
         $argText = (($args | ForEach-Object { Quote-PSString ([string]$_) }) -join ', ')
@@ -2730,6 +2735,10 @@ function Start-VisibleMapPatchProcess {
     $summaryPath = Join-Path $runDir 'map_run_summary.json'
 
     New-MapRunnerScript -MapCode $MapCode -EnabledSteps $enabledSteps -SkippedSteps $skippedSteps -RunnerPath $runner -SummaryPath $summaryPath -ToolPathsPs1 $toolPathsPs1 -PwshExe $pwsh
+
+    if ([bool]$ChkNoUpscaleTextures.IsChecked) {
+        Write-UiLog "$MapCode patches: texture step will use -NoUpscale."
+    }
 
     Write-UiLog "$MapCode patches: launching visible PowerShell process."
     Write-UiLog "Runner: $runner"
@@ -3016,6 +3025,10 @@ function Start-VisibleAllMapPatchProcess {
     }
 
     New-AllMapRunnerScript -MapRuns $mapRuns -RunnerPath $masterRunner -SummaryPath $masterSummary -PwshExe $pwsh
+
+    if ([bool]$ChkNoUpscaleTextures.IsChecked) {
+        Write-UiLog 'Run all patches: texture steps will use -NoUpscale.'
+    }
 
     Write-UiLog 'Run all patches: launching visible PowerShell process.'
     Write-UiLog "Runner: $masterRunner"
@@ -4027,8 +4040,11 @@ $Tools = @(
 
                             <DockPanel Grid.Row="1" LastChildFill="False" Margin="4,0,4,10">
                                 <TextBlock DockPanel.Dock="Left" Text="Output folders are created automatically under the selected output folder." VerticalAlignment="Center"/>
-                                <CheckBox Name="ChkShowMapNames" DockPanel.Dock="Right" Content="Show name spoilers" Margin="12,4,0,0" Foreground="{StaticResource TextBrush}" ToolTip="Display map names instead of only map codes."/>
-                                <Button Name="BtnRunAllMapPatches" DockPanel.Dock="Right" Content="Run all patches" Width="125" Height="28" Margin="12,0,0,0" ToolTip="Run all map patch pipelines sequentially, respecting backend skips such as GI EnableGI."/>
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                    <Button Name="BtnRunAllMapPatches" Content="Run all patches" Width="125" Height="28" Margin="12,0,0,0" ToolTip="Run all map patch pipelines sequentially, respecting backend skips such as GI EnableGI."/>
+                                    <CheckBox Name="ChkNoUpscaleTextures" Content="No texture upscale" Margin="12,4,0,0" Foreground="{StaticResource TextBrush}" ToolTip="Pass -NoUpscale to the texture step. Keeps texture treatments but outputs 1x textures."/>
+                                    <CheckBox Name="ChkShowMapNames" Content="Show name spoilers" Margin="12,4,0,0" Foreground="{StaticResource TextBrush}" ToolTip="Display map names instead of only map codes."/>
+                                </StackPanel>
                             </DockPanel>
 
                             <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
@@ -4074,6 +4090,7 @@ $TxtSetupAllStatus = C 'TxtSetupAllStatus'
 $TxtLog = C 'TxtLog'
 $ToolsGrid = C 'ToolsGrid'
 $MapsGrid = C 'MapsGrid'
+$ChkNoUpscaleTextures = C 'ChkNoUpscaleTextures'
 
 $TxtOutputRoot.Text = $defaultOutputRoot
 $TxtDownloadDir.Text = $defaultDownloadDir
