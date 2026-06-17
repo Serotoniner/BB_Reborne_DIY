@@ -11,23 +11,45 @@
 <#
     BBReborneDIYTool.ps1
 
-    WPF prototype for setting up the external tools used by the BB Reborne DIY workflow.
+    WPF launcher and setup tool for the BB Reborne DIY workflow.
 
     Current scope:
     - Step 1: Setup tab.
-    - Requires the user to set a game folder ending in dvdroot_ps4 before saving paths.
-    - Checks whether PowerShell 7 / pwsh.exe is available.
-    - Checks whether .NET 9 is available.
-    - Installs or updates PowerShell 7 through winget when requested.
-    - Installs the .NET 9 SDK through winget when requested.
-    - Installs ImageMagick Q16-HDRI through winget when requested.
-    - Downloads / extracts the three WitchyBND versions currently needed.
-    - Downloads texconv.exe directly from the latest Microsoft DirectXTex release endpoint.
-    - Downloads / extracts the portable Real-ESRGAN ncnn Vulkan Windows package.
-    - Replaces Real-ESRGAN's default models with BBReborneUpscaler.bin / BBReborneUpscaler.param from .\AI_upscaler.
-    - Detects executable paths and saves them to JSON + PowerShell variables.
-    - Writes WitchyBND setup defaults and relies on the Global runner to rewrite version-specific WitchyBND settings before each script step.
-    - Step 2: Mod files tab is intentionally empty for now.
+      - Requires the user to set a game folder ending in dvdroot_ps4 before saving paths.
+      - Lets the user select or create the modded output folder.
+      - Checks whether PowerShell 7 / pwsh.exe is available.
+      - Checks whether .NET 9 is available.
+      - Installs or updates PowerShell 7 through winget when requested.
+      - Installs the .NET 9 SDK through winget when requested.
+      - Installs ImageMagick Q16-HDRI through winget when requested.
+      - Downloads / extracts the three WitchyBND versions currently needed:
+          - v3.0.0.1
+          - v2.14.4.5
+          - v2.4.0.1
+      - Downloads texconv.exe directly from the latest Microsoft DirectXTex release endpoint.
+      - Downloads / extracts the portable Real-ESRGAN ncnn Vulkan Windows package.
+      - Replaces Real-ESRGAN's default models with BBReborneUpscaler.bin / BBReborneUpscaler.param from .\AI_upscaler.
+      - Detects executable paths and saves them to JSON + PowerShell variables.
+      - Probes CPU thread count, RAM, VRAM, and output drive free space to show a readiness/status summary.
+      - Writes WitchyBND setup defaults and relies on the Global runner to rewrite version-specific WitchyBND settings before each script step.
+      - Provides a launcher .cmd helper so the WPF tool can be started without typing the full PowerShell command.
+
+    - Step 2: Mod files tab.
+      - Shows the global patch row and the per-map build rows.
+      - Runs the Global patch sequence through Scripts\Global\00_Run_Global_BBReborne_All.ps1.
+      - Supports Global steps currently handled by the runner:
+          - SFX remove player light
+          - SFX M25
+          - Menu fe
+          - Gparam GameParam
+          - Obj from diffs
+          - Param DefaultDrawparam
+      - Lets the user choose which map rows and which per-map steps should run.
+      - Provides TOTAL-row checkboxes that check/uncheck all enabled rows at once for each map step.
+      - Shows estimated time, elapsed time, completion status, and output folder hints.
+      - Can hide map names by default to avoid spoilers.
+      - Warns the user not to change focus while external tools are receiving automated input.
+      - Uses visible child PowerShell windows for external tool/script execution instead of hiding WitchyBND behavior.
 
     Run:
       pwsh -NoProfile -ExecutionPolicy Bypass -STA -File .\BBReborneDIYTool.ps1
@@ -40,6 +62,8 @@
     - It creates a dedicated setup root under the user's Downloads folder by default.
     - ZIP extraction uses Expand-Archive -Force, which may overwrite files with the same path inside
       the dedicated tool folder, but it does not remove unrelated files.
+    - Runtime patch/diff folders are treated as inputs; destructive cleanup is limited to dedicated
+      work/output folders created by the tool or child scripts.
 #>
 
 Set-StrictMode -Version Latest
@@ -2484,6 +2508,8 @@ function Refresh-MapStepCheckboxAvailability {
             }
         }
     }
+
+    Update-MapStepBulkCheckboxState
 }
 
 function New-MapRunnerScript {
@@ -4056,6 +4082,8 @@ $TxtToolRoot.Text = $defaultToolRoot
 $RowControls = @{}
 $MapRowControls = @{}
 $MapStepCheckControls = @{}
+$MapStepBulkCheckControls = @{}
+$script:IsUpdatingMapStepBulkChecks = $false
 $TotalsControls = @{}
 $ScopeElapsedSeconds = @{}
 $ScopeCompleted = @{}
@@ -5027,6 +5055,14 @@ function New-StepCheckboxPanel {
             }
         }
 
+        if (-not $IsGlobal) {
+            $cb.Add_Click({
+                if (-not $script:IsUpdatingMapStepBulkChecks) {
+                    Update-MapStepBulkCheckboxState
+                }
+            }.GetNewClosure())
+        }
+
         [void]$panel.Children.Add($cb)
         $byStep[$id] = $cb
     }
@@ -5034,6 +5070,131 @@ function New-StepCheckboxPanel {
     if (-not $IsGlobal) { $MapStepCheckControls[$MapCode] = $byStep }
     return $panel
 }
+
+
+function Get-EnabledMapStepCheckboxesForStep {
+    param([Parameter(Mandatory)][string]$StepId)
+
+    $items = @()
+    foreach ($mapEntry in $MapStepCheckControls.GetEnumerator()) {
+        $byStep = $mapEntry.Value
+        if ($null -eq $byStep) { continue }
+        if (-not $byStep.ContainsKey($StepId)) { continue }
+
+        $cb = $byStep[$StepId]
+        if ($null -eq $cb) { continue }
+        if ($cb.IsEnabled -eq $true) {
+            $items += $cb
+        }
+    }
+
+    return @($items)
+}
+
+function Set-MapStepCheckboxesForAllMaps {
+    param(
+        [Parameter(Mandatory)][string]$StepId,
+        [Parameter(Mandatory)][bool]$IsChecked
+    )
+
+    $script:IsUpdatingMapStepBulkChecks = $true
+    try {
+        foreach ($cb in @(Get-EnabledMapStepCheckboxesForStep -StepId $StepId)) {
+            $cb.IsChecked = $IsChecked
+        }
+    }
+    finally {
+        $script:IsUpdatingMapStepBulkChecks = $false
+    }
+
+    Update-MapStepBulkCheckboxState
+}
+
+function Update-MapStepBulkCheckboxState {
+    if (-not $MapStepBulkCheckControls -or $MapStepBulkCheckControls.Count -le 0) { return }
+
+    $script:IsUpdatingMapStepBulkChecks = $true
+    try {
+        for ($i = 1; $i -le 8; $i++) {
+            $id = ('{0:00}' -f $i)
+            if (-not $MapStepBulkCheckControls.ContainsKey($id)) { continue }
+
+            $bulkCb = $MapStepBulkCheckControls[$id]
+            $enabledBoxes = @(Get-EnabledMapStepCheckboxesForStep -StepId $id)
+
+            if ($enabledBoxes.Count -le 0) {
+                $bulkCb.IsEnabled = $false
+                $bulkCb.IsChecked = $false
+                $bulkCb.Opacity = 0.35
+                $bulkCb.ToolTip = "Step $i is unavailable for all maps."
+                continue
+            }
+
+            $checkedCount = @($enabledBoxes | Where-Object { $_.IsChecked -eq $true }).Count
+            $bulkCb.IsEnabled = $true
+            $bulkCb.Opacity = 1.0
+            $bulkCb.ToolTip = "Check/uncheck step $i for all maps. Mixed state means only some enabled maps are selected."
+
+            if ($checkedCount -eq $enabledBoxes.Count) {
+                $bulkCb.IsChecked = $true
+            }
+            elseif ($checkedCount -eq 0) {
+                $bulkCb.IsChecked = $false
+            }
+            else {
+                $bulkCb.IsChecked = $null
+            }
+        }
+    }
+    finally {
+        $script:IsUpdatingMapStepBulkChecks = $false
+    }
+}
+
+function New-StepBulkCheckboxPanel {
+    $panel = New-Object System.Windows.Controls.StackPanel
+    $panel.Orientation = [System.Windows.Controls.Orientation]::Horizontal
+    $panel.Margin = [System.Windows.Thickness]::new(2)
+    $panel.VerticalAlignment = 'Center'
+    $panel.MinWidth = 300
+
+    for ($i = 1; $i -le 8; $i++) {
+        $id = ('{0:00}' -f $i)
+
+        $cb = New-Object System.Windows.Controls.CheckBox
+        $cb.Content = [string]$i
+        $cb.Margin = [System.Windows.Thickness]::new(6,0,6,0)
+        $cb.MinWidth = 28
+        $cb.VerticalAlignment = 'Center'
+        $cb.IsThreeState = $true
+        $cb.IsChecked = $true
+        $cb.Tag = $id
+        $cb.ToolTip = "Check/uncheck step $i for all maps."
+
+        $localStepId = $id
+        $localCheckBox = $cb
+
+        # Handle the toggle before WPF cycles a three-state checkbox.
+        # Desired behavior:
+        #   checked       -> click unchecks all enabled rows for this step
+        #   unchecked     -> click checks all enabled rows for this step
+        #   indeterminate -> click checks all enabled rows for this step
+        $cb.Add_PreviewMouseLeftButtonDown({
+            if ($script:IsUpdatingMapStepBulkChecks) { return }
+
+            $currentlyChecked = ($localCheckBox.IsChecked -eq $true)
+            Set-MapStepCheckboxesForAllMaps -StepId $localStepId -IsChecked (-not $currentlyChecked)
+
+            $_.Handled = $true
+        }.GetNewClosure())
+
+        [void]$panel.Children.Add($cb)
+        $MapStepBulkCheckControls[$id] = $cb
+    }
+
+    return $panel
+}
+
 
 function Add-MapGridChild {
     param(
@@ -5280,20 +5441,24 @@ function Build-MapRows {
     $totalName = New-TextBlockCell -Text 'Global + maps' -Bold
     $totalEstimate = New-TextBlockCell -Text (Format-ElapsedSeconds -Seconds (Get-ScaledReferenceTotalSeconds)) -Bold
     $totalElapsed = New-TextBlockCell -Text '00:00' -Bold
+    $totalStepsPanel = New-StepBulkCheckboxPanel
     $totalStatus = New-TextBlockCell -Text '0 / 15 completed' -Bold
 
     Add-MapGridChild -Child $totalCode -Row $rowIndex -Column 0
     Add-MapGridChild -Child $totalName -Row $rowIndex -Column 1
     Add-MapGridChild -Child $totalEstimate -Row $rowIndex -Column 2
     Add-MapGridChild -Child $totalElapsed -Row $rowIndex -Column 3
+    Add-MapGridChild -Child $totalStepsPanel -Row $rowIndex -Column 4
     Add-MapGridChild -Child $totalStatus -Row $rowIndex -Column 7
 
     $TotalsControls.Estimate = $totalEstimate
     $TotalsControls.Elapsed = $totalElapsed
+    $TotalsControls.StepChecks = $totalStepsPanel
     $TotalsControls.Status = $totalStatus
 
     Update-MapNameVisibility
     Refresh-MapStepCheckboxAvailability
+    Update-MapStepBulkCheckboxState
     Update-ModTotals
 }
 
