@@ -1,5 +1,5 @@
 diff --git a/m24_01_0000-gparambnd-dcx/m24_01_0000.gparam.xml b/m24_01_0000-gparambnd-dcx/m24_01_0000.gparam.xml
-index e3c9143..b129344 100644
+index 9640273..8f4c3b5 100644
 --- a/m24_01_0000-gparambnd-dcx/m24_01_0000.gparam.xml
 +++ b/m24_01_0000-gparambnd-dcx/m24_01_0000.gparam.xml
 @@ -42,14 +42,14 @@
@@ -792,16 +792,16 @@ index e3c9143..b129344 100644
        </param>
        <param name1="Yebis-GlareSamplingThreshold" name2="GlareSamplingThreshold" type="Float">
          <value id="0">0.01</value>
-@@ -1553,9 +1553,6 @@
-       <param name1="Yebis-AnamorphicFlareColor" name2="AnamorphicFlareColor" type="Float4">
-         <value id="0">1 1 1 1</value>
+@@ -1549,9 +1549,6 @@
        </param>
+       <param name1="Yebis-AnamorphicFlareGhostLuminanceScale" name2="AnamorphicFlareGhostLuminanceScale" type="Float">
+         <value id="0">1</value>
+-      </param>
 -      <param name1="Yebis-AnamorphicFlareColor" name2="AnamorphicFlareColor" type="Float4">
 -        <value id="0">1 1 1 1</value>
--      </param>
-       <param name1="Gs Presents【Bloom】 Enable" name2="Enable" type="IntA">
-         <value id="0">0</value>
        </param>
+       <param name1="Yebis-AnamorphicFlareColor" name2="AnamorphicFlareColor" type="Float4">
+         <value id="0">1 1 1 1</value>
 @@ -1586,19 +1583,19 @@
          <comment />
        </comments>
@@ -965,21 +965,23 @@ index e3c9143..b129344 100644
        <param name1="ShadowParam - Shadow: Cascade Dist 0-&gt;1" name2="Cascade Dist 0-&gt;1" type="Float">
 -        <value id="0">2</value>
 -        <value id="100">2</value>
-+        <value id="0">15</value>
-+        <value id="100">15</value>
-       </param>
-       <param name1="ShadowParam - Shadow: Cascade Dist 1-&gt;2" name2="Cascade Dist 1-&gt;2" type="Float">
+-      </param>
+-      <param name1="ShadowParam - Shadow: Cascade Dist 1-&gt;2" name2="Cascade Dist 1-&gt;2" type="Float">
 -        <value id="0">8</value>
 -        <value id="100">8</value>
+-      </param>
+-      <param name1="ShadowParam - Shadow: Cascade Dist 2-&gt;3" name2="Cascade Dist 2-&gt;3" type="Float">
+         <value id="0">15</value>
+         <value id="100">15</value>
+       </param>
++      <param name1="ShadowParam - Shadow: Cascade Dist 1-&gt;2" name2="Cascade Dist 1-&gt;2" type="Float">
 +        <value id="0">30</value>
 +        <value id="100">30</value>
-       </param>
-       <param name1="ShadowParam - Shadow: Cascade Dist 2-&gt;3" name2="Cascade Dist 2-&gt;3" type="Float">
--        <value id="0">15</value>
--        <value id="100">15</value>
++      </param>
++      <param name1="ShadowParam - Shadow: Cascade Dist 2-&gt;3" name2="Cascade Dist 2-&gt;3" type="Float">
 +        <value id="0">70</value>
 +        <value id="100">70</value>
-       </param>
++      </param>
        <param name1="ShadowParam - Shadow: Shadow Map Mode" name2="Shadow Map Mode" type="IntA">
 -        <value id="0">1</value>
 -        <value id="100">1</value>

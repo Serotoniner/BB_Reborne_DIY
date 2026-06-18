@@ -1,5 +1,5 @@
 diff --git a/m24_01_0000-gparambnd-dcx/m24_01_0100.gparam.xml b/m24_01_0000-gparambnd-dcx/m24_01_0100.gparam.xml
-index cfa9761..659118e 100644
+index 3e79c07..66463a8 100644
 --- a/m24_01_0000-gparambnd-dcx/m24_01_0100.gparam.xml
 +++ b/m24_01_0000-gparambnd-dcx/m24_01_0100.gparam.xml
 @@ -42,11 +42,11 @@
@@ -423,7 +423,7 @@ index cfa9761..659118e 100644
        </param>
        <param name1="SSAO - Edit-Ver2 Sample Offset" name2="Ver2 Sample Offset" type="Float">
          <value id="0">4</value>
-@@ -1142,13 +1145,13 @@
+@@ -1142,19 +1145,40 @@
          <value id="0">0</value>
        </param>
        <param name1="SSAO - Edit-Blur Radius 0" name2="Blur Radius 0" type="Float">
@@ -440,10 +440,13 @@ index cfa9761..659118e 100644
        </param>
        <param name1="SSAO - Edit-Final Blur Radius" name2="Final Blur Radius" type="Float">
          <value id="0">3</value>
-@@ -1159,6 +1162,27 @@
-       <param name1="SSAO - Edit-FinalBlur4x2" name2="FinalBlur4x2" type="BoolB">
-         <value id="0">True</value>
        </param>
+       <param name1="SSAO - Edit-Final Blur Radius2" name2="Final Blur Radius2" type="Float">
+         <value id="0">1</value>
++      </param>
++      <param name1="SSAO - Edit-FinalBlur4x2" name2="FinalBlur4x2" type="BoolB">
++        <value id="0">True</value>
++      </param>
 +      <param name1="SSAO - Edit-Ver2 DepthFadeStart" name2="DepthFadeStart" type="Float">
 +        <value id="0">3800</value>
 +      </param>
@@ -461,13 +464,9 @@ index cfa9761..659118e 100644
 +      </param>
 +      <param name1="SSAO - Edit-Ver2 Geom Bent Offset" name2="Geom Bent Offset" type="Float">
 +        <value id="0">0</value>
-+      </param>
-+      <param name1="SSAO - Edit-FinalBlur4x2" name2="FinalBlur4x2" type="BoolB">
-+        <value id="0">True</value>
-+      </param>
-     </group>
-     <group name1="Setting Info[Yebis]" name2="Setting Info">
-       <comments>
+       </param>
+       <param name1="SSAO - Edit-FinalBlur4x2" name2="FinalBlur4x2" type="BoolB">
+         <value id="0">True</value>
 @@ -1195,7 +1219,7 @@
          <value id="0">1</value>
        </param>
@@ -494,7 +493,7 @@ index cfa9761..659118e 100644
        </param>
        <param name1="SceneSetting-  LightCollect- BaseDist" name2="BaseDist" type="Float">
          <value id="0">10</value>
-@@ -1243,8 +1267,8 @@
+@@ -1243,11 +1267,11 @@
          <comment>診療所用</comment>
        </comments>
        <param name1="Yebis-ToneMapExposure" name2="Exposure" type="Float">
@@ -504,8 +503,12 @@ index cfa9761..659118e 100644
 +        <value id="100">1.5</value>
        </param>
        <param name1="Yebis-Gamma" name2="Gamma" type="Float">
-         <value id="0">2.2</value>
-@@ -1260,7 +1284,7 @@
+-        <value id="0">2.2</value>
++        <value id="0">2.2</value>
+         <value id="100">2.2</value>
+       </param>
+       <param name1="Yebis-ToneType" name2="ToneType" type="IntA">
+@@ -1260,15 +1284,15 @@
        </param>
        <param name1="Yebis-FilmicContrast" name2="FilmicContrast" type="Float">
          <value id="0">0.24</value>
@@ -514,11 +517,12 @@ index cfa9761..659118e 100644
        </param>
        <param name1="Yebis-ColorH" name2="ColorH" type="Float">
          <value id="0">0</value>
-@@ -1268,7 +1292,7 @@
+         <value id="100">0</value>
        </param>
        <param name1="Yebis-ColorS" name2="ColorS" type="Float">
-         <value id="0">0.9</value>
+-        <value id="0">0.9</value>
 -        <value id="100">0.7</value>
++        <value id="0">0.9</value>
 +        <value id="100">0.9</value>
        </param>
        <param name1="Yebis-ColorV" name2="ColorV" type="Float">
@@ -589,11 +593,14 @@ index cfa9761..659118e 100644
          <value id="100">0</value>
        </param>
 -      <param name1="GS Presents - ToneMap-AutoExposure LightAdapt Speed" name2="AutoExposure Speed" type="Float">
-+      <param name1="GS Presents - ToneMap-AutoExposure LightAdapt Speed" name2="AutoExposure LightAdapt Speed" type="Float">
-         <value id="0">1</value>
-         <value id="100">1</value>
-       </param>
+-        <value id="0">1</value>
+-        <value id="100">1</value>
+-      </param>
 -      <param name1="GS Presents - ToneMap-AutoExposure DarkAdapt Speed" name2="AutoExposure Speed" type="Float">
++      <param name1="GS Presents - ToneMap-AutoExposure LightAdapt Speed" name2="AutoExposure LightAdapt Speed" type="Float">
++        <value id="0">1</value>
++        <value id="100">1</value>
++      </param>
 +      <param name1="GS Presents - ToneMap-AutoExposure DarkAdapt Speed" name2="AutoExposure DarkAdapt Speed" type="Float">
          <value id="0">0.5</value>
          <value id="100">0.5</value>
@@ -698,10 +705,11 @@ index cfa9761..659118e 100644
        </param>
        <param name1="AntiAlias - fFxaaAlpha" name2="FxaaAlpha" type="Float">
          <value id="0">1</value>
-@@ -1804,6 +1828,75 @@
+@@ -1803,6 +1827,75 @@
+       </param>
        <param name1="AntiAlias - DlaaEpsilon" name2="DlaaEpsilon" type="Float">
          <value id="0">0.25</value>
-       </param>
++      </param>
 +      <param name1="AntiAlias - FeedbackWeight" name2="FeedbackWeight" type="Float">
 +        <value id="0">0.95</value>
 +      </param>
@@ -770,10 +778,9 @@ index cfa9761..659118e 100644
 +      </param>
 +      <param name1="AntiAlias - FBWeightBorderDepth(2)" name2="FBWeightBorderDepth(2)" type="Float">
 +        <value id="0">40</value>
-+      </param>
+       </param>
      </group>
      <group name1="MotionBlur-Editor[Yebis]" name2="MotionBlur">
-       <comments>
 @@ -1815,24 +1908,24 @@
          <value id="1">1</value>
        </param>

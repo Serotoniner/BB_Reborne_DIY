@@ -1,5 +1,5 @@
 diff --git a/m21_01_0001-gparambnd-dcx/m21_01_0001.gparam.xml b/m21_01_0001-gparambnd-dcx/m21_01_0001.gparam.xml
-index 64c0e4d..bc445d0 100644
+index aab7a8f..ed56549 100644
 --- a/m21_01_0001-gparambnd-dcx/m21_01_0001.gparam.xml
 +++ b/m21_01_0001-gparambnd-dcx/m21_01_0001.gparam.xml
 @@ -33,23 +33,23 @@
@@ -138,13 +138,14 @@ index 64c0e4d..bc445d0 100644
          <value id="0">4</value>
        </param>
        <param name1="Yebis-Use GlareQuality" name2="GlareQuality" type="IntA">
--        <value id="0">2</value>
 +        <value id="0">0</value>
++      </param>
++      <param name1="Yebis-DepthOfFieldQuality" name2="DepthOfFieldQuality" type="IntA">
+         <value id="0">2</value>
        </param>
-       <param name1="Yebis-DepthOfFieldQuality" name2="DepthOfFieldQuality" type="IntA">
+-      <param name1="Yebis-DepthOfFieldQuality" name2="DepthOfFieldQuality" type="IntA">
 -        <value id="0">5</value>
-+        <value id="0">2</value>
-       </param>
+-      </param>
        <param name1="SceneSetting-  LightCollect- Auto Compute Enable" name2="Auto Compute Enable" type="BoolA">
 -        <value id="0">False</value>
 +        <value id="0">True</value>
@@ -167,7 +168,18 @@ index 64c0e4d..bc445d0 100644
        </param>
      </group>
      <group name1="Tone Map[Yebis]" name2="Tone Map">
-@@ -517,7 +517,7 @@
+@@ -508,16 +508,16 @@
+         <comment />
+       </comments>
+       <param name1="Yebis-ToneMapExposure" name2="Exposure" type="Float">
+-        <value id="0">2.3</value>
++        <value id="0">2.3</value>
+       </param>
+       <param name1="Yebis-Gamma" name2="Gamma" type="Float">
+-        <value id="0">2.2</value>
++        <value id="0">2.2</value>
+       </param>
+       <param name1="Yebis-ToneType" name2="ToneType" type="IntA">
          <value id="0">2</value>
        </param>
        <param name1="Yebis-ToneMappingFactor" name2="ToneMappingFactor" type="Float">
@@ -176,7 +188,16 @@ index 64c0e4d..bc445d0 100644
        </param>
        <param name1="Yebis-FilmicContrast" name2="FilmicContrast" type="Float">
          <value id="0">0.15</value>
-@@ -538,7 +538,7 @@
+@@ -526,7 +526,7 @@
+         <value id="0">0</value>
+       </param>
+       <param name1="Yebis-ColorS" name2="ColorS" type="Float">
+-        <value id="0">1</value>
++        <value id="0">1</value>
+       </param>
+       <param name1="Yebis-ColorV" name2="ColorV" type="Float">
+         <value id="0">1</value>
+@@ -538,10 +538,10 @@
          <value id="0">0</value>
        </param>
        <param name1="Yebis-DelayFrame" name2="DelayFrame" type="Float">
@@ -184,7 +205,11 @@ index 64c0e4d..bc445d0 100644
 +        <value id="0">0.01</value>
        </param>
        <param name1="Yebis-MiddleGray" name2="MiddleGray" type="Float">
-         <value id="0">0.18</value>
+-        <value id="0">0.18</value>
++        <value id="0">0.18</value>
+       </param>
+       <param name1="Yebis-ToneInfluencedByGlare" name2="ToneInfluencedByGlare" type="Float">
+         <value id="0">1</value>
 @@ -586,7 +586,7 @@
          <value id="0">1</value>
        </param>
@@ -266,6 +291,15 @@ index 64c0e4d..bc445d0 100644
        </param>
        <param name1="Yebis-SampleInterleaved" name2="SampleInterleaved" type="Float">
          <value id="0">1</value>
+@@ -1059,7 +1056,7 @@
+         <value id="0">1</value>
+       </param>
+       <param name1="Yebis-LutSourceId" name2="LutSourceId" type="IntA">
+-        <value id="0">4</value>
++        <value id="0">4</value>
+       </param>
+     </group>
+     <group name1="ShadowParam ParamEditor" name2="ShadowParam">
 @@ -1076,16 +1073,16 @@
          <value id="0">1</value>
        </param>
@@ -274,13 +308,14 @@ index 64c0e4d..bc445d0 100644
 +        <value id="0">70</value>
        </param>
        <param name1="ShadowParam - Shadow: Far Fade Dist" name2="Far Fade Dist" type="Float">
--        <value id="0">15</value>
 +        <value id="0">30</value>
++      </param>
++      <param name1="ShadowParam - Shadow: Cascade Dist 0-&gt;1" name2="Cascade Dist 0-&gt;1" type="Float">
+         <value id="0">15</value>
        </param>
-       <param name1="ShadowParam - Shadow: Cascade Dist 0-&gt;1" name2="Cascade Dist 0-&gt;1" type="Float">
+-      <param name1="ShadowParam - Shadow: Cascade Dist 0-&gt;1" name2="Cascade Dist 0-&gt;1" type="Float">
 -        <value id="0">2</value>
-+        <value id="0">15</value>
-       </param>
+-      </param>
        <param name1="ShadowParam - Shadow: Cascade Dist 1-&gt;2" name2="Cascade Dist 1-&gt;2" type="Float">
 -        <value id="0">8</value>
 +        <value id="0">30</value>

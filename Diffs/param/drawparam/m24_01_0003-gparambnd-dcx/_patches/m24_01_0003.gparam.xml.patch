@@ -1,5 +1,5 @@
 diff --git a/m24_01_0003-gparambnd-dcx/m24_01_0003.gparam.xml b/m24_01_0003-gparambnd-dcx/m24_01_0003.gparam.xml
-index 957700b..8359a00 100644
+index 7af673d..4805ede 100644
 --- a/m24_01_0003-gparambnd-dcx/m24_01_0003.gparam.xml
 +++ b/m24_01_0003-gparambnd-dcx/m24_01_0003.gparam.xml
 @@ -42,14 +42,14 @@
@@ -585,13 +585,14 @@ index 957700b..8359a00 100644
          <value id="0">4</value>
        </param>
        <param name1="Yebis-Use GlareQuality" name2="GlareQuality" type="IntA">
--        <value id="0">2</value>
 +        <value id="0">0</value>
++      </param>
++      <param name1="Yebis-DepthOfFieldQuality" name2="DepthOfFieldQuality" type="IntA">
+         <value id="0">2</value>
        </param>
-       <param name1="Yebis-DepthOfFieldQuality" name2="DepthOfFieldQuality" type="IntA">
+-      <param name1="Yebis-DepthOfFieldQuality" name2="DepthOfFieldQuality" type="IntA">
 -        <value id="0">4</value>
-+        <value id="0">2</value>
-       </param>
+-      </param>
        <param name1="SceneSetting-  LightCollect- Auto Compute Enable" name2="Auto Compute Enable" type="BoolA">
 -        <value id="0">False</value>
 +        <value id="0">True</value>
@@ -610,10 +611,12 @@ index 957700b..8359a00 100644
        </param>
        <param name1="SceneSetting-  ReflectScene Assign DynamicLight" name2="ReflectScene Assign DynamicLight" type="BoolA">
          <value id="0">True</value>
-@@ -1243,156 +1243,207 @@
+@@ -1242,157 +1242,208 @@
+         <comment />
        </comments>
        <param name1="Yebis-ToneMapExposure" name2="Exposure" type="Float">
-         <value id="0">2.3</value>
+-        <value id="0">2.3</value>
++        <value id="0">2.3</value>
 +        <value id="100">3</value>
        </param>
        <param name1="Yebis-Gamma" name2="Gamma" type="Float">
@@ -856,16 +859,16 @@ index 957700b..8359a00 100644
        </param>
        <param name1="Yebis-GlareBloomLuminanceGamma" name2="GlareBloomLuminanceGamma" type="Float">
          <value id="0">1</value>
-@@ -1501,9 +1552,6 @@
-       <param name1="Yebis-AnamorphicFlareColor" name2="AnamorphicFlareColor" type="Float4">
-         <value id="0">1 1 1 1</value>
+@@ -1497,9 +1548,6 @@
        </param>
+       <param name1="Yebis-AnamorphicFlareGhostLuminanceScale" name2="AnamorphicFlareGhostLuminanceScale" type="Float">
+         <value id="0">1</value>
+-      </param>
 -      <param name1="Yebis-AnamorphicFlareColor" name2="AnamorphicFlareColor" type="Float4">
 -        <value id="0">1 1 1 1</value>
--      </param>
-       <param name1="Gs Presents【Bloom】 Enable" name2="Enable" type="IntA">
-         <value id="0">0</value>
        </param>
+       <param name1="Yebis-AnamorphicFlareColor" name2="AnamorphicFlareColor" type="Float4">
+         <value id="0">1 1 1 1</value>
 @@ -1534,7 +1582,7 @@
          <comment />
        </comments>
@@ -1079,21 +1082,23 @@ index 957700b..8359a00 100644
        <param name1="ShadowParam - Shadow: Cascade Dist 0-&gt;1" name2="Cascade Dist 0-&gt;1" type="Float">
 -        <value id="0">2</value>
 -        <value id="100">2</value>
-+        <value id="0">15</value>
-+        <value id="100">15</value>
-       </param>
-       <param name1="ShadowParam - Shadow: Cascade Dist 1-&gt;2" name2="Cascade Dist 1-&gt;2" type="Float">
+-      </param>
+-      <param name1="ShadowParam - Shadow: Cascade Dist 1-&gt;2" name2="Cascade Dist 1-&gt;2" type="Float">
 -        <value id="0">8</value>
 -        <value id="100">8</value>
+-      </param>
+-      <param name1="ShadowParam - Shadow: Cascade Dist 2-&gt;3" name2="Cascade Dist 2-&gt;3" type="Float">
+         <value id="0">15</value>
+         <value id="100">15</value>
+       </param>
++      <param name1="ShadowParam - Shadow: Cascade Dist 1-&gt;2" name2="Cascade Dist 1-&gt;2" type="Float">
 +        <value id="0">30</value>
 +        <value id="100">30</value>
-       </param>
-       <param name1="ShadowParam - Shadow: Cascade Dist 2-&gt;3" name2="Cascade Dist 2-&gt;3" type="Float">
--        <value id="0">15</value>
--        <value id="100">15</value>
++      </param>
++      <param name1="ShadowParam - Shadow: Cascade Dist 2-&gt;3" name2="Cascade Dist 2-&gt;3" type="Float">
 +        <value id="0">70</value>
 +        <value id="100">70</value>
-       </param>
++      </param>
        <param name1="ShadowParam - Shadow: Shadow Map Mode" name2="Shadow Map Mode" type="IntA">
 -        <value id="0">1</value>
 -        <value id="100">1</value>

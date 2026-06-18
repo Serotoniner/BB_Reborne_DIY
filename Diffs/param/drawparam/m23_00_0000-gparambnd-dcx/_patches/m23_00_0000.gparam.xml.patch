@@ -1,5 +1,5 @@
 diff --git a/m23_00_0000-gparambnd-dcx/m23_00_0000.gparam.xml b/m23_00_0000-gparambnd-dcx/m23_00_0000.gparam.xml
-index 003deb3..3f366a2 100644
+index 8ce2642..b4e258b 100644
 --- a/m23_00_0000-gparambnd-dcx/m23_00_0000.gparam.xml
 +++ b/m23_00_0000-gparambnd-dcx/m23_00_0000.gparam.xml
 @@ -32,18 +32,20 @@
@@ -674,13 +674,14 @@ index 003deb3..3f366a2 100644
          <value id="0">4</value>
        </param>
        <param name1="Yebis-Use GlareQuality" name2="GlareQuality" type="IntA">
--        <value id="0">2</value>
 +        <value id="0">0</value>
++      </param>
++      <param name1="Yebis-DepthOfFieldQuality" name2="DepthOfFieldQuality" type="IntA">
+         <value id="0">2</value>
        </param>
-       <param name1="Yebis-DepthOfFieldQuality" name2="DepthOfFieldQuality" type="IntA">
+-      <param name1="Yebis-DepthOfFieldQuality" name2="DepthOfFieldQuality" type="IntA">
 -        <value id="0">4</value>
-+        <value id="0">2</value>
-       </param>
+-      </param>
        <param name1="SceneSetting-  LightCollect- Auto Compute Enable" name2="Auto Compute Enable" type="BoolA">
 -        <value id="0">False</value>
 +        <value id="0">True</value>
@@ -703,7 +704,7 @@ index 003deb3..3f366a2 100644
        </param>
      </group>
      <group name1="Tone Map[Yebis]" name2="Tone Map">
-@@ -962,7 +1016,7 @@
+@@ -962,10 +1016,10 @@
          <comment />
        </comments>
        <param name1="Yebis-ToneMapExposure" name2="Exposure" type="Float">
@@ -711,7 +712,11 @@ index 003deb3..3f366a2 100644
 +        <value id="0">3.6</value>
        </param>
        <param name1="Yebis-Gamma" name2="Gamma" type="Float">
-         <value id="0">2.2</value>
+-        <value id="0">2.2</value>
++        <value id="0">2.2</value>
+       </param>
+       <param name1="Yebis-ToneType" name2="ToneType" type="IntA">
+         <value id="0">2</value>
 @@ -974,13 +1028,13 @@
          <value id="0">32</value>
        </param>
@@ -901,31 +906,35 @@ index 003deb3..3f366a2 100644
        <param name1="ShadowParam - Shadow: Cascade Dist 0-&gt;1" name2="Cascade Dist 0-&gt;1" type="Float">
 -        <value id="0">2</value>
 -        <value id="100">2</value>
-+        <value id="0">15</value>
-+        <value id="100">15</value>
-       </param>
-       <param name1="ShadowParam - Shadow: Cascade Dist 1-&gt;2" name2="Cascade Dist 1-&gt;2" type="Float">
+-      </param>
+-      <param name1="ShadowParam - Shadow: Cascade Dist 1-&gt;2" name2="Cascade Dist 1-&gt;2" type="Float">
 -        <value id="0">8</value>
 -        <value id="100">8</value>
+-      </param>
+-      <param name1="ShadowParam - Shadow: Cascade Dist 2-&gt;3" name2="Cascade Dist 2-&gt;3" type="Float">
+         <value id="0">15</value>
+         <value id="100">15</value>
+       </param>
++      <param name1="ShadowParam - Shadow: Cascade Dist 1-&gt;2" name2="Cascade Dist 1-&gt;2" type="Float">
 +        <value id="0">30</value>
 +        <value id="100">30</value>
-       </param>
-       <param name1="ShadowParam - Shadow: Cascade Dist 2-&gt;3" name2="Cascade Dist 2-&gt;3" type="Float">
--        <value id="0">15</value>
--        <value id="100">15</value>
++      </param>
++      <param name1="ShadowParam - Shadow: Cascade Dist 2-&gt;3" name2="Cascade Dist 2-&gt;3" type="Float">
 +        <value id="0">70</value>
 +        <value id="100">70</value>
-       </param>
++      </param>
        <param name1="ShadowParam - Shadow: Shadow Map Mode" name2="Shadow Map Mode" type="IntA">
--        <value id="0">1</value>
--        <value id="100">1</value>
 +        <value id="0">3</value>
 +        <value id="100">3</value>
-       </param>
-       <param name1="ShadowParam - Shadow: Shadow Map FilterMode" name2="Shadow Map FilterMode" type="IntA">
++      </param>
++      <param name1="ShadowParam - Shadow: Shadow Map FilterMode" name2="Shadow Map FilterMode" type="IntA">
          <value id="0">1</value>
          <value id="100">1</value>
        </param>
+-      <param name1="ShadowParam - Shadow: Shadow Map FilterMode" name2="Shadow Map FilterMode" type="IntA">
+-        <value id="0">1</value>
+-        <value id="100">1</value>
+-      </param>
        <param name1="ShadowParam - Shadow: Depth Offset" name2="Depth Offset" type="Float">
 -        <value id="0">0</value>
 -        <value id="100">0</value>

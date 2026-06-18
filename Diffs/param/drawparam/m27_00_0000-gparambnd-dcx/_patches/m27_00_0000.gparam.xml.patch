@@ -1,5 +1,5 @@
 diff --git a/m27_00_0000-gparambnd-dcx/m27_00_0000.gparam.xml b/m27_00_0000-gparambnd-dcx/m27_00_0000.gparam.xml
-index 8cb9473..19bdd6c 100644
+index 5647fb3..8ddfc52 100644
 --- a/m27_00_0000-gparambnd-dcx/m27_00_0000.gparam.xml
 +++ b/m27_00_0000-gparambnd-dcx/m27_00_0000.gparam.xml
 @@ -16,14 +16,14 @@
@@ -139,13 +139,14 @@ index 8cb9473..19bdd6c 100644
          <value id="0">4</value>
        </param>
        <param name1="Yebis-Use GlareQuality" name2="GlareQuality" type="IntA">
--        <value id="0">2</value>
 +        <value id="0">0</value>
++      </param>
++      <param name1="Yebis-DepthOfFieldQuality" name2="DepthOfFieldQuality" type="IntA">
+         <value id="0">2</value>
        </param>
-       <param name1="Yebis-DepthOfFieldQuality" name2="DepthOfFieldQuality" type="IntA">
+-      <param name1="Yebis-DepthOfFieldQuality" name2="DepthOfFieldQuality" type="IntA">
 -        <value id="0">5</value>
-+        <value id="0">2</value>
-       </param>
+-      </param>
        <param name1="SceneSetting-  LightCollect- Auto Compute Enable" name2="Auto Compute Enable" type="BoolA">
 -        <value id="0">False</value>
 +        <value id="0">True</value>
@@ -196,6 +197,15 @@ index 8cb9473..19bdd6c 100644
 +        <value id="0">0.9</value>
        </param>
        <param name1="Yebis-ColorV" name2="ColorV" type="Float">
+         <value id="0">1</value>
+@@ -513,7 +513,7 @@
+         <value id="0">0.2</value>
+       </param>
+       <param name1="Yebis-MiddleGray" name2="MiddleGray" type="Float">
+-        <value id="0">0.18</value>
++        <value id="0">0.18</value>
+       </param>
+       <param name1="Yebis-ToneInfluencedByGlare" name2="ToneInfluencedByGlare" type="Float">
          <value id="0">1</value>
 @@ -558,7 +558,7 @@
          <value id="0">1</value>
@@ -387,12 +397,13 @@ index 8cb9473..19bdd6c 100644
 +        <value id="0">15</value>
        </param>
        <param name1="Glow Filter-Glow - Blur RgbScale" name2="Blur RgbScale" type="Float">
--        <value id="0">3</value>
 +        <value id="0">5</value>
-       </param>
-       <param name1="Glow Filter-Glow - Blur AlphaScale" name2="Blur AlphaScale" type="Float">
++      </param>
++      <param name1="Glow Filter-Glow - Blur AlphaScale" name2="Blur AlphaScale" type="Float">
+         <value id="0">3</value>
+-      </param>
+-      <param name1="Glow Filter-Glow - Blur AlphaScale" name2="Blur AlphaScale" type="Float">
 -        <value id="0">1</value>
-+        <value id="0">3</value>
        </param>
      </group>
      <group name1="ColorParaffin Filter-Editor" name2="ColorParaffin Filter ">
@@ -406,4 +417,3 @@ index 8cb9473..19bdd6c 100644
    </unk3s>
    <unk_block_2>00 00 00 00 33 00 00 00 01 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00 01 00 00 00 01 00 00 00 04 00 00 00 05 00 00 00 01 00 00 00 08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</unk_block_2>
  </gparam>
-\ No newline at end of file

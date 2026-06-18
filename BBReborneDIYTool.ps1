@@ -47,6 +47,16 @@
       - Lets the user choose which map rows and which per-map steps should run.
       - Provides TOTAL-row checkboxes that check/uncheck all enabled rows at once for each map step.
       - Provides a No texture upscale toggle that passes -NoUpscale to the texture step, keeping treatments while targeting 1x textures.
+
+    - Step 3: Param tweaks tab.
+      - Scans gparam XML patch files under .\Diffs for the five Yebis params.
+      - Shows map/time rows with spoiler-safe raw codes or friendly labels.
+      - Provides nested editable columns for Exposure, Gamma, ColorS, MiddleGray, and LutSourceId.
+      - Each nested param column shows User, Modded, and Vanilla values, with header buttons for User/Modded/Vanilla mass-copy actions.
+      - Generates a full custom copy of the gparam patch diffs under Output\BBReborne_param_custom\_work, changing only editable +value lines from the User boxes.
+      - Can run the map Param patch step against that custom diff copy, writing patched files under Output\BBReborne_param_custom.
+      - Saves and reloads the last User values from Tools\BBReborneDIYTool.param_tweaks.user_values.json.
+      - Removes the custom _work directory after successful Param patching.
       - Shows estimated time, elapsed time, completion status, and output folder hints.
       - Can hide map names by default to avoid spoilers.
       - Warns the user not to change focus while external tools are receiving automated input.
@@ -3282,7 +3292,7 @@ $Maps = @(
     [pscustomobject]@{ Code = 'M24'; Name = 'Yahrnam'; Estimate = 'TBD' },
     [pscustomobject]@{ Code = 'M25'; Name = 'Forsaken Castle Cainhurst'; Estimate = 'TBD' },
     [pscustomobject]@{ Code = 'M26'; Name = 'Nightmare of Mensis'; Estimate = 'TBD' },
-    [pscustomobject]@{ Code = 'M27'; Name = 'Forbiden Woods'; Estimate = 'TBD' },
+    [pscustomobject]@{ Code = 'M27'; Name = 'Forbidden Woods'; Estimate = 'TBD' },
     [pscustomobject]@{ Code = 'M28'; Name = "Yahar'gul Unseen Village"; Estimate = 'TBD' },
     [pscustomobject]@{ Code = 'M29'; Name = 'Chalice Dungeons'; Estimate = 'TBD' },
     [pscustomobject]@{ Code = 'M32'; Name = 'Byrgenwerth'; Estimate = 'TBD' },
@@ -4054,6 +4064,35 @@ $Tools = @(
                     </GroupBox>
                 </Grid>
             </TabItem>
+
+            <TabItem Header="Step 3: Param tweaks">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" TextWrapping="Wrap" Margin="4,0,4,10">
+                        Edit Yebis values exposed by the gparam patch files. Generate patches writes a modified copy under the selected output folder, leaving the original Diffs folder untouched.
+                    </TextBlock>
+
+                    <DockPanel Grid.Row="1" LastChildFill="False" Margin="4,0,4,10">
+                        <TextBlock DockPanel.Dock="Left" Name="TxtParamTweaksStatus" Text="Param tweak rows not loaded yet." VerticalAlignment="Center"/>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button Name="BtnRefreshParamTweaks" Content="1 - Reload Values" Width="135" Height="28" Margin="12,0,0,0" ToolTip="Reload Yebis tweak rows from the current patch files under Diffs and recover the last saved User values."/>
+                            <Button Name="BtnGenerateParamTweaksPatches" Content="2 - Generate Patches" Width="150" Height="28" Margin="8,0,0,0" ToolTip="Save User values and generate a modified copy of the gparam patch files under Output\BBReborne_param_custom\_work."/>
+                            <Button Name="BtnPatchParamTweaksFiles" Content="3 - Patch Params" Width="130" Height="28" Margin="8,0,0,0" ToolTip="Run the map Param patch step using the custom patch copy under Output\BBReborne_param_custom\_work."/>
+                            <CheckBox Name="ChkShowParamTweaksSpoilers" Content="Show name spoilers" Margin="12,4,0,0" Foreground="{StaticResource TextBrush}" ToolTip="Display friendly map/time names instead of raw codes."/>
+                        </StackPanel>
+                    </DockPanel>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                        <Grid Name="ParamTweaksGrid" Margin="4"/>
+                    </ScrollViewer>
+                </Grid>
+            </TabItem>
+
         </TabControl>
     </Grid>
 </Window>
@@ -4091,6 +4130,9 @@ $TxtLog = C 'TxtLog'
 $ToolsGrid = C 'ToolsGrid'
 $MapsGrid = C 'MapsGrid'
 $ChkNoUpscaleTextures = C 'ChkNoUpscaleTextures'
+$ParamTweaksGrid = C 'ParamTweaksGrid'
+$TxtParamTweaksStatus = C 'TxtParamTweaksStatus'
+$ChkShowParamTweaksSpoilers = C 'ChkShowParamTweaksSpoilers'
 
 $TxtOutputRoot.Text = $defaultOutputRoot
 $TxtDownloadDir.Text = $defaultDownloadDir
@@ -4101,6 +4143,7 @@ $MapRowControls = @{}
 $MapStepCheckControls = @{}
 $MapStepBulkCheckControls = @{}
 $script:IsUpdatingMapStepBulkChecks = $false
+$ParamTweaksRowControls = @()
 $TotalsControls = @{}
 $ScopeElapsedSeconds = @{}
 $ScopeCompleted = @{}
@@ -5356,6 +5399,961 @@ function Update-ModTotals {
     $TotalsControls.Status.Text = "$completedCount / $totalTargets completed"
 }
 
+
+function Add-ParamTweaksGridChild {
+    param(
+        [Parameter(Mandatory)]$Child,
+        [Parameter(Mandatory)][int]$Row,
+        [Parameter(Mandatory)][int]$Column
+    )
+
+    [System.Windows.Controls.Grid]::SetRow($Child, $Row)
+    [System.Windows.Controls.Grid]::SetColumn($Child, $Column)
+    [void]$ParamTweaksGrid.Children.Add($Child)
+}
+
+function Get-YebisTargetParams {
+    return @(
+        [pscustomobject]@{ Key = 'Exposure';    Name1 = 'Yebis-ToneMapExposure'; Name2 = 'Exposure';    Kind = 'Float' },
+        [pscustomobject]@{ Key = 'Gamma';       Name1 = 'Yebis-Gamma';           Name2 = 'Gamma';       Kind = 'Float' },
+        [pscustomobject]@{ Key = 'ColorS';      Name1 = 'Yebis-ColorS';          Name2 = 'ColorS';      Kind = 'Float' },
+        [pscustomobject]@{ Key = 'MiddleGray';  Name1 = 'Yebis-MiddleGray';      Name2 = 'MiddleGray';  Kind = 'Float' },
+        [pscustomobject]@{ Key = 'LutSourceId'; Name1 = 'Yebis-LutSourceId';     Name2 = 'LutSourceId'; Kind = 'Int' }
+    )
+}
+
+function Get-ParamTweaksFriendlyLabelTable {
+    $table = @{}
+
+    $table['m21_00_0000'] = [pscustomobject]@{ Map = 'Hunters Dream';               Time = 'Night' }
+    $table['m21_00_0001'] = [pscustomobject]@{ Map = 'Hunters Dream';               Time = 'Bloodmoon' }
+    $table['m21_01_0000'] = [pscustomobject]@{ Map = 'Abandoned Workshop';          Time = 'Afternoon' }
+    $table['m21_01_0001'] = [pscustomobject]@{ Map = 'Abandoned Workshop';          Time = 'Night' }
+    $table['m21_01_0002'] = [pscustomobject]@{ Map = 'Abandoned Workshop';          Time = 'Bloodmoon' }
+
+    $table['m22_00_0000'] = [pscustomobject]@{ Map = 'Hemwick Charnel Lane';        Time = 'Afternoon' }
+    $table['m22_00_0001'] = [pscustomobject]@{ Map = 'Hemwick Charnel Lane';        Time = 'Night' }
+
+    $table['m23_00_0000'] = [pscustomobject]@{ Map = 'Old Yharnam';                 Time = 'Afternoon' }
+    $table['m23_00_0001'] = [pscustomobject]@{ Map = 'Old Yharnam';                 Time = 'Night' }
+
+    $table['m24_00_0000'] = [pscustomobject]@{ Map = 'Cathedral Ward';              Time = 'Afternoon' }
+    $table['m24_00_0001'] = [pscustomobject]@{ Map = 'Cathedral Ward';              Time = 'Night' }
+    $table['m24_00_0002'] = [pscustomobject]@{ Map = 'Cathedral Ward';              Time = 'Bloodmoon' }
+
+    $table['m24_01_0000'] = [pscustomobject]@{ Map = 'Central Yharnam';             Time = 'Afternoon' }
+    $table['m24_01_0100'] = [pscustomobject]@{ Map = 'Central Yharnam';             Time = 'Clinic' }
+    $table['m24_01_0001'] = [pscustomobject]@{ Map = 'Central Yharnam';             Time = 'Sunset' }
+    $table['m24_01_0002'] = [pscustomobject]@{ Map = 'Central Yharnam';             Time = 'Night' }
+    $table['m24_01_0003'] = [pscustomobject]@{ Map = 'Central Yharnam';             Time = 'Bloodmoon' }
+
+    $table['m24_02_0000'] = [pscustomobject]@{ Map = 'Upper Cathedral';             Time = 'Bloodmoon' }
+
+    $table['m25_00_0000'] = [pscustomobject]@{ Map = 'Forsaken Castle Cainhurst';   Time = 'Night' }
+    $table['m26_00_0000'] = [pscustomobject]@{ Map = 'Nightmare of Mensis';         Time = 'Night' }
+
+    $table['m27_00_0000'] = [pscustomobject]@{ Map = 'Forbidden Woods';             Time = 'Night' }
+    $table['m27_00_0100'] = [pscustomobject]@{ Map = 'Forbidden Woods';             Time = 'Transition' }
+
+    $table['m28_00_0000'] = [pscustomobject]@{ Map = "Yahar'gul Unseen Village";   Time = 'Afternoon' }
+    $table['m28_00_0001'] = [pscustomobject]@{ Map = "Yahar'gul Unseen Village";   Time = 'Night' }
+    $table['m28_00_0002'] = [pscustomobject]@{ Map = "Yahar'gul Unseen Village";   Time = 'Bloodmoon' }
+
+    $table['m29_00_0000'] = [pscustomobject]@{ Map = 'Chalice Dungeons';            Time = 'Indoors' }
+    $table['m32_00_0000'] = [pscustomobject]@{ Map = 'Byrgenwerth';                 Time = 'Night' }
+    $table['m33_00_0000'] = [pscustomobject]@{ Map = 'Nightmare Frontier';          Time = 'Afternoon' }
+    $table['m34_00_0000'] = [pscustomobject]@{ Map = "Hunter's Nightmare";         Time = 'Afternoon' }
+    $table['m35_00_0000'] = [pscustomobject]@{ Map = 'Research Hall';               Time = 'Indoors' }
+    $table['m36_00_0000'] = [pscustomobject]@{ Map = 'Fishing Hamlet';              Time = 'Night' }
+
+    return $table
+}
+
+function Get-ParamTweaksPatchFiles {
+    $diffRoot = Get-DiffRoot
+    if (-not (Test-Path -LiteralPath $diffRoot -PathType Container)) {
+        return @()
+    }
+
+    $paramRoot = Join-Path $diffRoot 'param'
+    $searchRoot = if (Test-Path -LiteralPath $paramRoot -PathType Container) { $paramRoot } else { $diffRoot }
+
+    return @(
+        Get-ChildItem -LiteralPath $searchRoot -Recurse -File -Filter '*.patch' -ErrorAction SilentlyContinue |
+            Where-Object {
+                $_.Name -like '*.gparam.xml.patch' -and
+                $_.Name -notlike '*_witchy-bnd4.xml.patch'
+            } |
+            Sort-Object FullName
+    )
+}
+
+function Get-ParamTweaksMapInfoFromPatchPath {
+    param([Parameter(Mandatory)][string]$PatchPath)
+
+    $leaf = [System.IO.Path]::GetFileName($PatchPath)
+    $xmlKey = ''
+    $mapAreaCode = ''
+    $shortMapCode = ''
+    $timeCode = ''
+
+    if ($leaf -match '^(m(?<map>\d{2})_(?<area>\d{2})_(?<time>\d{4}))\.gparam\.xml\.patch$') {
+        $xmlKey = [string]$Matches[1]
+        $mapAreaCode = ('M{0}_{1}' -f $Matches['map'], $Matches['area'])
+        $shortMapCode = ('M{0}' -f $Matches['map'])
+        $timeCode = [string]$Matches['time']
+    }
+    else {
+        $xmlKey = [System.IO.Path]::GetFileNameWithoutExtension([System.IO.Path]::GetFileNameWithoutExtension($leaf))
+        $mapAreaCode = $xmlKey
+        $shortMapCode = $xmlKey
+        $timeCode = ''
+    }
+
+    $labelTable = Get-ParamTweaksFriendlyLabelTable
+    $friendly = $null
+    if ($labelTable.ContainsKey($xmlKey)) {
+        $friendly = $labelTable[$xmlKey]
+    }
+
+    $friendlyMap = if ($friendly) { [string]$friendly.Map } else { $mapAreaCode }
+    $friendlyTime = if ($friendly) { [string]$friendly.Time } else { $timeCode }
+
+    return [pscustomobject]@{
+        XmlKey       = $xmlKey
+        MapAreaCode  = $mapAreaCode
+        ShortMapCode = $shortMapCode
+        TimeCode     = $timeCode
+        MapName      = $friendlyMap
+        TimeName     = $friendlyTime
+    }
+}
+
+function Get-YebisValuesFromPatch {
+    param([Parameter(Mandatory)][string]$PatchPath)
+
+    $targets = @(Get-YebisTargetParams)
+    $byName1 = @{}
+    foreach ($target in $targets) {
+        $byName1[$target.Name1] = $target
+    }
+
+    $result = @{}
+    foreach ($target in $targets) {
+        $result[$target.Key] = [pscustomobject]@{
+            Key       = $target.Key
+            Name1     = $target.Name1
+            Name2     = $target.Name2
+            Kind      = $target.Kind
+            Vanilla   = ''
+            Modded    = ''
+            User      = ''
+            LinkedIds = @()
+            HasValue  = $false
+        }
+    }
+
+    $currentKey = $null
+    $currentIds = New-Object System.Collections.Generic.List[string]
+
+    foreach ($line in [System.IO.File]::ReadLines($PatchPath)) {
+        $content = $line
+        if ($content.Length -gt 0 -and $content[0] -in @(' ', '-', '+')) {
+            $content = $content.Substring(1)
+        }
+
+        if ($content -match '<param\b[^>]*name1="([^"]+)"[^>]*name2="([^"]+)"') {
+            $name1 = [string]$Matches[1]
+            if ($byName1.ContainsKey($name1)) {
+                $currentKey = [string]$byName1[$name1].Key
+                $currentIds.Clear()
+            }
+            else {
+                $currentKey = $null
+            }
+        }
+
+        if ($currentKey) {
+            if ($line -match '^-.*<value\s+id="([^"]+)">\s*(.*?)\s*</value>') {
+                $id = [string]$Matches[1]
+                $value = [string]$Matches[2]
+                if ($id -eq '0') {
+                    $result[$currentKey].Vanilla = $value
+                    $result[$currentKey].HasValue = $true
+                }
+                else {
+                    [void]$currentIds.Add($id)
+                }
+            }
+            elseif ($line -match '^\+.*<value\s+id="([^"]+)">\s*(.*?)\s*</value>') {
+                $id = [string]$Matches[1]
+                $value = [string]$Matches[2]
+                if ($id -eq '0') {
+                    $result[$currentKey].Modded = $value
+                    $result[$currentKey].User = $value
+                    $result[$currentKey].HasValue = $true
+                }
+                else {
+                    [void]$currentIds.Add($id)
+                }
+            }
+
+            if ($content -match '</param>') {
+                $result[$currentKey].LinkedIds = @($currentIds | Select-Object -Unique | Sort-Object)
+                $currentKey = $null
+                $currentIds.Clear()
+            }
+        }
+    }
+
+    return $result
+}
+
+function Set-ParamTweaksColumnUserValues {
+    param(
+        [Parameter(Mandatory)][string]$ParamKey,
+        [Parameter(Mandatory)][ValidateSet('User','Modded','Vanilla')][string]$Source
+    )
+
+    if (-not $ParamTweaksRowControls -or @($ParamTweaksRowControls).Count -le 0) {
+        return
+    }
+
+    $firstUserValue = $null
+    if ($Source -eq 'User') {
+        foreach ($row in @($ParamTweaksRowControls)) {
+            if (-not $row.Values.ContainsKey($ParamKey)) { continue }
+            $cell = $row.Values[$ParamKey]
+            if ($cell -and $cell.TextBox) {
+                $firstUserValue = [string]$cell.TextBox.Text
+                break
+            }
+        }
+
+        if ($null -eq $firstUserValue) {
+            return
+        }
+    }
+
+    foreach ($row in @($ParamTweaksRowControls)) {
+        if (-not $row.Values.ContainsKey($ParamKey)) { continue }
+
+        $cell = $row.Values[$ParamKey]
+        if (-not $cell -or -not $cell.TextBox) { continue }
+
+        if ($Source -eq 'User') {
+            $cell.TextBox.Text = $firstUserValue
+            continue
+        }
+
+        $valueInfo = $null
+        if ($row.ValueInfos -and $row.ValueInfos.ContainsKey($ParamKey)) {
+            $valueInfo = $row.ValueInfos[$ParamKey]
+        }
+
+        if ($null -eq $valueInfo) { continue }
+
+        if ($Source -eq 'Modded') {
+            if (-not [string]::IsNullOrWhiteSpace([string]$valueInfo.Modded)) {
+                $cell.TextBox.Text = [string]$valueInfo.Modded
+            }
+        }
+        elseif ($Source -eq 'Vanilla') {
+            if (-not [string]::IsNullOrWhiteSpace([string]$valueInfo.Vanilla)) {
+                $cell.TextBox.Text = [string]$valueInfo.Vanilla
+            }
+        }
+    }
+
+    Write-UiLog ("Param tweaks: copied {0} values into User boxes for {1}." -f $Source, $ParamKey)
+}
+
+function New-ParamTweaksHeaderCell {
+    param(
+        [Parameter(Mandatory)][string]$Title,
+        [switch]$Nested,
+        [string]$ParamKey = ''
+    )
+
+    $border = New-Object System.Windows.Controls.Border
+    $border.BorderBrush = [System.Windows.Media.Brushes]::DimGray
+    $border.BorderThickness = [System.Windows.Thickness]::new(0,0,1,1)
+    $border.Padding = [System.Windows.Thickness]::new(4)
+    $border.Margin = [System.Windows.Thickness]::new(0)
+
+    if (-not $Nested) {
+        $tb = New-TextBlockCell -Text $Title -Bold
+        $tb.Margin = [System.Windows.Thickness]::new(2)
+        $border.Child = $tb
+        return $border
+    }
+
+    $grid = New-Object System.Windows.Controls.Grid
+    $row1 = New-Object System.Windows.Controls.RowDefinition
+    $row1.Height = [System.Windows.GridLength]::Auto
+    [void]$grid.RowDefinitions.Add($row1)
+    $row2 = New-Object System.Windows.Controls.RowDefinition
+    $row2.Height = [System.Windows.GridLength]::Auto
+    [void]$grid.RowDefinitions.Add($row2)
+
+    foreach ($w in @('82','62','62')) {
+        $col = New-Object System.Windows.Controls.ColumnDefinition
+        $col.Width = [System.Windows.GridLengthConverter]::new().ConvertFromString($w)
+        [void]$grid.ColumnDefinitions.Add($col)
+    }
+
+    $titleBlock = New-TextBlockCell -Text $Title -Bold
+    $titleBlock.HorizontalAlignment = 'Center'
+    [System.Windows.Controls.Grid]::SetRow($titleBlock, 0)
+    [System.Windows.Controls.Grid]::SetColumnSpan($titleBlock, 3)
+    [void]$grid.Children.Add($titleBlock)
+
+    $labels = @('User', 'Modded', 'Vanilla')
+    for ($i = 0; $i -lt $labels.Count; $i++) {
+        $source = $labels[$i]
+
+        $button = New-Object System.Windows.Controls.Button
+        $button.Content = $source
+        $button.Height = 22
+        $button.Margin = [System.Windows.Thickness]::new(2)
+        $button.Padding = [System.Windows.Thickness]::new(4,0,4,0)
+        $button.FontSize = 11
+        $button.ToolTip = if ($source -eq 'User') {
+            "Copy the first User value in this $Title column to all User boxes in this column."
+        }
+        else {
+            "Copy each row's $source value in this $Title column to that row's User box."
+        }
+
+        $localParamKey = $ParamKey
+        $localSource = $source
+        $button.Add_Click({
+            Invoke-SafeUiAction {
+                if (-not [string]::IsNullOrWhiteSpace($localParamKey)) {
+                    Set-ParamTweaksColumnUserValues -ParamKey $localParamKey -Source $localSource
+                }
+            }
+        }.GetNewClosure())
+
+        [System.Windows.Controls.Grid]::SetRow($button, 1)
+        [System.Windows.Controls.Grid]::SetColumn($button, $i)
+        [void]$grid.Children.Add($button)
+    }
+
+    $border.Child = $grid
+    return $border
+}
+
+function New-ParamTweaksValueCell {
+    param(
+        [Parameter(Mandatory)]$ValueInfo,
+        [Parameter(Mandatory)][string]$PatchPath
+    )
+
+    $border = New-Object System.Windows.Controls.Border
+    $border.BorderBrush = [System.Windows.Media.Brushes]::DimGray
+    $border.BorderThickness = [System.Windows.Thickness]::new(0,0,1,1)
+    $border.Padding = [System.Windows.Thickness]::new(4)
+    $border.Margin = [System.Windows.Thickness]::new(0)
+
+    $grid = New-Object System.Windows.Controls.Grid
+    foreach ($w in @('82','62','62')) {
+        $col = New-Object System.Windows.Controls.ColumnDefinition
+        $col.Width = [System.Windows.GridLengthConverter]::new().ConvertFromString($w)
+        [void]$grid.ColumnDefinitions.Add($col)
+    }
+
+    $userBox = New-Object System.Windows.Controls.TextBox
+    $userBox.Height = 24
+    $userBox.Margin = [System.Windows.Thickness]::new(2)
+    $userBox.Text = [string]$ValueInfo.User
+    $userBox.ToolTip = "Custom value for $($ValueInfo.Name1). This UI does not write patches yet."
+
+    $moddedText = if ([string]::IsNullOrWhiteSpace([string]$ValueInfo.Modded)) { '-' } else { [string]$ValueInfo.Modded }
+    $vanillaText = if ([string]::IsNullOrWhiteSpace([string]$ValueInfo.Vanilla)) { '-' } else { [string]$ValueInfo.Vanilla }
+
+    $modded = New-TextBlockCell -Text $moddedText
+    $modded.HorizontalAlignment = 'Center'
+    $modded.ToolTip = "Modded +value from patch."
+
+    $vanilla = New-TextBlockCell -Text $vanillaText
+    $vanilla.HorizontalAlignment = 'Center'
+    $vanilla.ToolTip = "Vanilla -value from patch."
+
+    if ($ValueInfo.LinkedIds -and @($ValueInfo.LinkedIds).Count -gt 0) {
+        $userBox.ToolTip = "Custom value for $($ValueInfo.Name1). Linked changed ids in this patch: $(@($ValueInfo.LinkedIds) -join ', '). This UI does not write patches yet."
+    }
+
+    [System.Windows.Controls.Grid]::SetColumn($userBox, 0)
+    [System.Windows.Controls.Grid]::SetColumn($modded, 1)
+    [System.Windows.Controls.Grid]::SetColumn($vanilla, 2)
+    [void]$grid.Children.Add($userBox)
+    [void]$grid.Children.Add($modded)
+    [void]$grid.Children.Add($vanilla)
+
+    $border.Child = $grid
+
+    return [pscustomobject]@{
+        Element = $border
+        TextBox = $userBox
+        Modded = $modded
+        Vanilla = $vanilla
+    }
+}
+
+function Update-ParamTweaksNameVisibility {
+    if (-not $ParamTweaksRowControls) { return }
+
+    $showNames = ($ChkShowParamTweaksSpoilers.IsChecked -eq $true)
+
+    foreach ($row in @($ParamTweaksRowControls)) {
+        if ($showNames) {
+            $row.MapText.Text = $row.MapName
+            $row.TimeText.Text = $row.TimeName
+        }
+        else {
+            $row.MapText.Text = $row.MapAreaCode
+            $row.TimeText.Text = $row.TimeCode
+        }
+    }
+}
+
+function Get-ParamTweaksSourceRoot {
+    $diffRoot = Get-DiffRoot
+    $paramRoot = Join-Path $diffRoot 'param'
+
+    if (Test-Path -LiteralPath $paramRoot -PathType Container) {
+        return ([System.IO.Path]::GetFullPath($paramRoot))
+    }
+
+    return ([System.IO.Path]::GetFullPath($diffRoot))
+}
+
+function Get-RelativePathUnderRoot {
+    param(
+        [Parameter(Mandatory)][string]$BasePath,
+        [Parameter(Mandatory)][string]$FullPath
+    )
+
+    $base = [System.IO.Path]::GetFullPath($BasePath)
+    $path = [System.IO.Path]::GetFullPath($FullPath)
+
+    if (-not $base.EndsWith([System.IO.Path]::DirectorySeparatorChar)) {
+        $base = $base + [System.IO.Path]::DirectorySeparatorChar
+    }
+
+    try {
+        $baseUri = [System.Uri]::new($base)
+        $pathUri = [System.Uri]::new($path)
+        $rel = $baseUri.MakeRelativeUri($pathUri).ToString()
+        return ([System.Uri]::UnescapeDataString($rel) -replace '/', [System.IO.Path]::DirectorySeparatorChar)
+    }
+    catch {
+        return ([System.IO.Path]::GetFileName($FullPath))
+    }
+}
+
+function Get-ParamTweaksCustomPatchRoot {
+    $outputRoot = Get-RequiredOutputRoot
+    $customRoot = Join-Path $outputRoot 'BBReborne_param_custom'
+    $workRoot = Join-Path $customRoot '_work'
+    $diffRoot = Get-DiffRoot
+    $paramRoot = Join-Path $diffRoot 'param'
+    $sourceRoot = Get-ParamTweaksSourceRoot
+
+    $destRoot = Join-Path $workRoot 'Diffs'
+
+    if ((Test-Path -LiteralPath $paramRoot -PathType Container) -and
+        (([System.IO.Path]::GetFullPath($sourceRoot).TrimEnd('\')) -ieq ([System.IO.Path]::GetFullPath($paramRoot).TrimEnd('\')))) {
+        $destRoot = Join-Path $destRoot 'param'
+    }
+
+    return [pscustomobject]@{
+        CustomRoot = $customRoot
+        WorkRoot   = $workRoot
+        SourceRoot = $sourceRoot
+        DestRoot   = $destRoot
+    }
+}
+
+function Set-YebisPatchPlusValues {
+    param(
+        [Parameter(Mandatory)][string]$PatchPath,
+        [Parameter(Mandatory)]$ValuesByName1
+    )
+
+    if (-not (Test-Path -LiteralPath $PatchPath -PathType Leaf)) {
+        throw "Patch file not found: $PatchPath"
+    }
+
+    $lines = [System.IO.File]::ReadAllLines($PatchPath)
+    $outLines = New-Object System.Collections.Generic.List[string]
+
+    $activeEntry = $null
+    $activeName1 = $null
+
+    foreach ($line in $lines) {
+        $content = [string]$line
+        if ($content.Length -gt 0 -and $content[0] -in @(' ', '-', '+')) {
+            $content = $content.Substring(1)
+        }
+
+        if ($content -match '<param\b[^>]*name1="([^"]+)"[^>]*name2="([^"]+)"') {
+            $name1 = [string]$Matches[1]
+            if ($ValuesByName1.ContainsKey($name1)) {
+                $activeName1 = $name1
+                $activeEntry = $ValuesByName1[$name1]
+            }
+            else {
+                $activeName1 = $null
+                $activeEntry = $null
+            }
+        }
+
+        $newLine = [string]$line
+
+        if ($activeEntry -and $line -match '^(\+.*<value\s+id=")([^"]+)(">\s*)(.*?)(\s*</value>.*)$') {
+            $valueId = [string]$Matches[2]
+            if (@($activeEntry.Ids) -contains $valueId) {
+                $newLine = $Matches[1] + $valueId + $Matches[3] + [string]$activeEntry.Value + $Matches[5]
+            }
+        }
+
+        [void]$outLines.Add($newLine)
+
+        if ($activeEntry -and $content -match '</param>') {
+            $activeName1 = $null
+            $activeEntry = $null
+        }
+    }
+
+    [System.IO.File]::WriteAllText(
+        $PatchPath,
+        (($outLines.ToArray()) -join "`n") + "`n",
+        (New-Object System.Text.UTF8Encoding($false))
+    )
+}
+
+function Get-ParamTweaksUserValuesPath {
+    $toolRoot = $TxtToolRoot.Text.Trim()
+    if ([string]::IsNullOrWhiteSpace($toolRoot)) {
+        $toolRoot = Join-Path $scriptRoot 'Tools'
+    }
+
+    New-Item -ItemType Directory -Path $toolRoot -Force | Out-Null
+    return (Join-Path $toolRoot 'BBReborneDIYTool.param_tweaks.user_values.json')
+}
+
+function Save-ParamTweaksUserValues {
+    if (-not $ParamTweaksRowControls -or @($ParamTweaksRowControls).Count -le 0) {
+        return
+    }
+
+    $rows = New-Object System.Collections.Generic.List[object]
+
+    foreach ($row in @($ParamTweaksRowControls)) {
+        $values = [ordered]@{}
+
+        foreach ($target in @(Get-YebisTargetParams)) {
+            if ($row.Values -and $row.Values.ContainsKey($target.Key)) {
+                $cell = $row.Values[$target.Key]
+                if ($cell -and $cell.TextBox) {
+                    $values[$target.Key] = [string]$cell.TextBox.Text
+                }
+            }
+        }
+
+        [void]$rows.Add([pscustomobject]@{
+            XmlKey      = [string]$row.XmlKey
+            MapAreaCode = [string]$row.MapAreaCode
+            TimeCode    = [string]$row.TimeCode
+            Values      = $values
+        })
+    }
+
+    $payload = [pscustomobject]@{
+        Version = 1
+        SavedAt = (Get-Date).ToString('o')
+        Rows = @($rows.ToArray())
+    }
+
+    $path = Get-ParamTweaksUserValuesPath
+    $json = $payload | ConvertTo-Json -Depth 8
+
+    [System.IO.File]::WriteAllText(
+        $path,
+        $json,
+        (New-Object System.Text.UTF8Encoding($false))
+    )
+
+    Write-UiLog "Param tweaks: user values saved: $path"
+}
+
+function Restore-ParamTweaksUserValues {
+    $path = Get-ParamTweaksUserValuesPath
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        return
+    }
+
+    try {
+        $data = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+        $byXmlKey = @{}
+
+        foreach ($savedRow in @($data.Rows)) {
+            $key = [string]$savedRow.XmlKey
+            if ([string]::IsNullOrWhiteSpace($key)) { continue }
+            $byXmlKey[$key] = $savedRow
+        }
+
+        $restored = 0
+
+        foreach ($row in @($ParamTweaksRowControls)) {
+            $xmlKey = [string]$row.XmlKey
+            if (-not $byXmlKey.ContainsKey($xmlKey)) { continue }
+
+            $savedRow = $byXmlKey[$xmlKey]
+            foreach ($target in @(Get-YebisTargetParams)) {
+                if (-not $row.Values.ContainsKey($target.Key)) { continue }
+
+                $prop = $savedRow.Values.PSObject.Properties[$target.Key]
+                if ($null -eq $prop) { continue }
+
+                $cell = $row.Values[$target.Key]
+                if ($cell -and $cell.TextBox) {
+                    $cell.TextBox.Text = [string]$prop.Value
+                    $restored++
+                }
+            }
+        }
+
+        if ($restored -gt 0) {
+            Write-UiLog ("Param tweaks: restored {0} saved User value(s) from {1}" -f $restored, $path)
+        }
+    }
+    catch {
+        Write-UiLog "Param tweaks: could not restore saved User values from $path :: $($_.Exception.Message)"
+    }
+}
+
+function Invoke-GenerateParamTweaksPatches {
+    param([switch]$Silent)
+
+    if (-not $ParamTweaksRowControls -or @($ParamTweaksRowControls).Count -le 0) {
+        Build-ParamTweaksRows
+    }
+
+    Save-ParamTweaksUserValues
+
+    $allPatchFiles = @(Get-ParamTweaksPatchFiles)
+    if ($allPatchFiles.Count -le 0) {
+        throw 'No gparam patch files were found under Diffs.'
+    }
+
+    $paths = Get-ParamTweaksCustomPatchRoot
+    New-Item -ItemType Directory -Path $paths.DestRoot -Force | Out-Null
+
+    $sourceToDest = @{}
+    $copied = 0
+
+    # Copy every gparam patch first, including no-value/special cases that do not appear
+    # as editable UI rows. The User boxes only control editable +value lines later.
+    foreach ($patch in $allPatchFiles) {
+        $relative = Get-RelativePathUnderRoot -BasePath $paths.SourceRoot -FullPath $patch.FullName
+        $destPatch = Join-Path $paths.DestRoot $relative
+        $destDir = Split-Path -Parent $destPatch
+
+        New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+        Copy-Item -LiteralPath $patch.FullName -Destination $destPatch -Force
+
+        $sourceToDest[[System.IO.Path]::GetFullPath($patch.FullName)] = $destPatch
+        $copied++
+    }
+
+    $modified = 0
+    $skippedRows = 0
+
+    foreach ($row in @($ParamTweaksRowControls)) {
+        if ([string]::IsNullOrWhiteSpace([string]$row.PatchPath)) {
+            $skippedRows++
+            continue
+        }
+
+        $sourceKey = [System.IO.Path]::GetFullPath([string]$row.PatchPath)
+        if (-not $sourceToDest.ContainsKey($sourceKey)) {
+            Write-UiLog "Param tweaks: editable row source was not found in copied patch set, skipped: $($row.PatchPath)"
+            $skippedRows++
+            continue
+        }
+
+        $destPatch = $sourceToDest[$sourceKey]
+
+        $valuesByName1 = @{}
+        foreach ($target in @(Get-YebisTargetParams)) {
+            if (-not $row.Values.ContainsKey($target.Key)) { continue }
+            if (-not $row.ValueInfos.ContainsKey($target.Key)) { continue }
+
+            $cell = $row.Values[$target.Key]
+            $info = $row.ValueInfos[$target.Key]
+            if (-not $info.HasValue) { continue }
+            if (-not $cell -or -not $cell.TextBox) { continue }
+
+            $userValue = [string]$cell.TextBox.Text
+            if ([string]::IsNullOrWhiteSpace($userValue)) { continue }
+
+            $ids = New-Object System.Collections.Generic.List[string]
+            [void]$ids.Add('0')
+
+            foreach ($linkedId in @($info.LinkedIds)) {
+                if ([string]::IsNullOrWhiteSpace([string]$linkedId)) { continue }
+                # Keep changed non-zero values linked to the id=0 UI value.
+                # This includes the known id=100 cases and any other changed id detected in the patch.
+                if (-not ($ids.Contains([string]$linkedId))) {
+                    [void]$ids.Add([string]$linkedId)
+                }
+            }
+
+            $valuesByName1[$target.Name1] = [pscustomobject]@{
+                Value = $userValue
+                Ids   = @($ids.ToArray())
+            }
+        }
+
+        if ($valuesByName1.Count -le 0) {
+            $skippedRows++
+            continue
+        }
+
+        Set-YebisPatchPlusValues -PatchPath $destPatch -ValuesByName1 $valuesByName1
+        $modified++
+    }
+
+    $TxtParamTweaksStatus.Text = ("Generated custom patch copy: {0} modified / {1} copied. Output: {2}" -f $modified, $copied, $paths.DestRoot)
+    Write-UiLog ("Param tweaks: generated custom patch copy. Modified={0}; Copied={1}; SkippedEditableRows={2}; Output={3}" -f $modified, $copied, $skippedRows, $paths.DestRoot)
+
+    if (-not $Silent) {
+        [System.Windows.MessageBox]::Show(
+            ("Generated custom patch copy.`n`nModified editable patch files: {0}`nCopied patch files: {1}`nSkipped editable rows: {2}`n`nOutput:`n{3}" -f $modified, $copied, $skippedRows, $paths.DestRoot),
+            'Param tweaks',
+            [System.Windows.MessageBoxButton]::OK,
+            [System.Windows.MessageBoxImage]::Information
+        ) | Out-Null
+    }
+
+    return $paths
+}
+
+
+function Invoke-PatchParamTweaksFiles {
+    $paths = Invoke-GenerateParamTweaksPatches -Silent
+
+    if ($null -eq $paths) {
+        $paths = Get-ParamTweaksCustomPatchRoot
+    }
+
+    if (-not (Test-Path -LiteralPath $paths.DestRoot -PathType Container)) {
+        throw "Custom patch directory was not found: $($paths.DestRoot)"
+    }
+
+    Save-PathFiles -Silent
+
+    $toolRoot = $TxtToolRoot.Text.Trim()
+    if ([string]::IsNullOrWhiteSpace($toolRoot)) { throw 'Tool root is empty.' }
+
+    $toolPathsPs1 = Join-Path $toolRoot 'BBReborneDIYTool.paths.ps1'
+    if (-not (Test-Path -LiteralPath $toolPathsPs1 -PathType Leaf)) {
+        throw "Tool paths file was not created: $toolPathsPs1"
+    }
+
+    $pwsh = Get-PwshForWorkflow
+
+    $mapScriptsRoot = Join-Path (Join-Path $scriptRoot 'Scripts') 'Mapfiles'
+    $paramScript = Join-Path $mapScriptsRoot '05_Mapfiles_BBReborne_Param.ps1'
+    if (-not (Test-Path -LiteralPath $paramScript -PathType Leaf)) {
+        throw "Param patch script not found: $paramScript"
+    }
+
+    $gameRoot = $TxtGameRoot.Text.Trim()
+    if ([string]::IsNullOrWhiteSpace($gameRoot)) { throw 'Game folder is empty.' }
+
+    $outputRoot = Get-RequiredOutputRoot
+    $customOutputDir = Join-Path (Join-Path (Join-Path $outputRoot 'BBReborne_param_custom') 'param') 'drawparam'
+    $customLogRoot = Join-Path (Join-Path (Join-Path $outputRoot '_logs') 'param_tweaks') (Get-Date -Format 'yyyyMMdd_HHmmss')
+
+    New-Item -ItemType Directory -Path $customOutputDir -Force | Out-Null
+    New-Item -ItemType Directory -Path $customLogRoot -Force | Out-Null
+
+    $argList = [string[]]@(
+        '-NoProfile',
+        '-ExecutionPolicy', 'Bypass',
+        '-File', $paramScript,
+        '-ToolPathsPs1', $toolPathsPs1,
+        '-GameRoot', $gameRoot,
+        '-OutputRoot', $outputRoot,
+        '-PatchDir', $paths.DestRoot,
+        '-OutputDir', $customOutputDir,
+        '-LogDir', $customLogRoot
+    )
+
+    $argLine = Join-WindowsCommandLine -Arguments $argList
+
+    Write-UiLog 'Param tweaks: launching custom Param patch process.'
+    Write-UiLog "Param tweaks patch dir: $($paths.DestRoot)"
+    Write-UiLog "Param tweaks output dir: $customOutputDir"
+    Write-UiLog "Param tweaks log dir: $customLogRoot"
+
+    $button = C 'BtnPatchParamTweaksFiles'
+    $button.IsEnabled = $false
+    $TxtParamTweaksStatus.Text = 'Patching custom param files...'
+
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    $proc = Start-Process -FilePath $pwsh -ArgumentList $argLine -WindowStyle Normal -PassThru
+
+    $timer = [System.Windows.Threading.DispatcherTimer]::new()
+    $timer.Interval = [TimeSpan]::FromSeconds(2)
+    $timer.Tag = [pscustomobject]@{
+        Process = $proc
+        Stopwatch = $sw
+        Button = $button
+        OutputDir = $customOutputDir
+        LogDir = $customLogRoot
+        WorkRoot = $paths.WorkRoot
+    }
+
+    $timer.Add_Tick({
+        param($sender, $eventArgs)
+
+        $state = $sender.Tag
+        if (-not $state.Process.HasExited) {
+            $TxtParamTweaksStatus.Text = ("Patching custom param files... {0}" -f (Format-ElapsedSeconds -Seconds $state.Stopwatch.Elapsed.TotalSeconds))
+            return
+        }
+
+        $sender.Stop()
+        $state.Stopwatch.Stop()
+        $state.Button.IsEnabled = $true
+
+        $exitCode = $state.Process.ExitCode
+        if ($exitCode -eq 0) {
+            if ($state.WorkRoot -and (Test-Path -LiteralPath $state.WorkRoot -PathType Container)) {
+                try {
+                    Remove-Item -LiteralPath $state.WorkRoot -Recurse -Force
+                    Write-UiLog ("Param tweaks: removed work directory after patching: {0}" -f $state.WorkRoot)
+                }
+                catch {
+                    Write-UiLog ("Param tweaks: could not remove work directory {0}: {1}" -f $state.WorkRoot, $_.Exception.Message)
+                }
+            }
+
+            $TxtParamTweaksStatus.Text = ("Custom param patching completed. Output: {0}" -f $state.OutputDir)
+            Write-UiLog ("Param tweaks: custom Param patch process completed. Output={0}; LogDir={1}" -f $state.OutputDir, $state.LogDir)
+        }
+        else {
+            $TxtParamTweaksStatus.Text = ("Custom param patching failed with exit code {0}. See visible PowerShell window / logs." -f $exitCode)
+            Write-UiLog ("Param tweaks: custom Param patch process failed with exit code {0}. Output={1}; LogDir={2}" -f $exitCode, $state.OutputDir, $state.LogDir)
+        }
+    })
+
+    $timer.Start()
+}
+
+function Build-ParamTweaksRows {
+    $ParamTweaksGrid.Children.Clear()
+    $ParamTweaksGrid.RowDefinitions.Clear()
+    $ParamTweaksGrid.ColumnDefinitions.Clear()
+    $script:ParamTweaksRowControls = @()
+
+    foreach ($w in @('115','85','220','220','220','220','220')) {
+        $col = New-Object System.Windows.Controls.ColumnDefinition
+        $col.Width = [System.Windows.GridLengthConverter]::new().ConvertFromString($w)
+        [void]$ParamTweaksGrid.ColumnDefinitions.Add($col)
+    }
+
+    $header = New-Object System.Windows.Controls.RowDefinition
+    $header.Height = [System.Windows.GridLength]::Auto
+    [void]$ParamTweaksGrid.RowDefinitions.Add($header)
+
+    Add-ParamTweaksGridChild -Child (New-ParamTweaksHeaderCell -Title 'Map') -Row 0 -Column 0
+    Add-ParamTweaksGridChild -Child (New-ParamTweaksHeaderCell -Title 'Time') -Row 0 -Column 1
+
+    $targets = @(Get-YebisTargetParams)
+    for ($i = 0; $i -lt $targets.Count; $i++) {
+        Add-ParamTweaksGridChild -Child (New-ParamTweaksHeaderCell -Title $targets[$i].Key -Nested -ParamKey $targets[$i].Key) -Row 0 -Column ($i + 2)
+    }
+
+    $patchFiles = @(Get-ParamTweaksPatchFiles)
+    $rowsAdded = 0
+
+    foreach ($patch in $patchFiles) {
+        try {
+            $values = Get-YebisValuesFromPatch -PatchPath $patch.FullName
+            $hasAny = $false
+            foreach ($target in $targets) {
+                if ($values[$target.Key].HasValue) { $hasAny = $true; break }
+            }
+            if (-not $hasAny) { continue }
+
+            $info = Get-ParamTweaksMapInfoFromPatchPath -PatchPath $patch.FullName
+
+            $rowIndex = $ParamTweaksGrid.RowDefinitions.Count
+            $rd = New-Object System.Windows.Controls.RowDefinition
+            $rd.Height = [System.Windows.GridLength]::Auto
+            [void]$ParamTweaksGrid.RowDefinitions.Add($rd)
+
+            $mapText = New-TextBlockCell -Text $info.MapAreaCode -Tooltip $patch.FullName
+            $timeText = New-TextBlockCell -Text $info.TimeCode -Tooltip $patch.FullName
+
+            Add-ParamTweaksGridChild -Child $mapText -Row $rowIndex -Column 0
+            Add-ParamTweaksGridChild -Child $timeText -Row $rowIndex -Column 1
+
+            $valueControls = @{}
+            for ($i = 0; $i -lt $targets.Count; $i++) {
+                $target = $targets[$i]
+                $cell = New-ParamTweaksValueCell -ValueInfo $values[$target.Key] -PatchPath $patch.FullName
+                Add-ParamTweaksGridChild -Child $cell.Element -Row $rowIndex -Column ($i + 2)
+                $valueControls[$target.Key] = $cell
+            }
+
+            $script:ParamTweaksRowControls += [pscustomobject]@{
+                MapText      = $mapText
+                TimeText     = $timeText
+                XmlKey       = $info.XmlKey
+                MapAreaCode  = $info.MapAreaCode
+                ShortMapCode = $info.ShortMapCode
+                TimeCode     = $info.TimeCode
+                MapName      = $info.MapName
+                TimeName     = $info.TimeName
+                PatchPath    = $patch.FullName
+                Values       = $valueControls
+                ValueInfos   = $values
+            }
+
+            $rowsAdded++
+        }
+        catch {
+            Write-UiLog "Param tweaks: failed to read patch $($patch.FullName): $($_.Exception.Message)"
+        }
+    }
+
+    if ($rowsAdded -eq 0) {
+        $rowIndex = $ParamTweaksGrid.RowDefinitions.Count
+        $rd = New-Object System.Windows.Controls.RowDefinition
+        $rd.Height = [System.Windows.GridLength]::Auto
+        [void]$ParamTweaksGrid.RowDefinitions.Add($rd)
+
+        $msg = New-TextBlockCell -Text 'No Yebis gparam patch rows found under Diffs yet.' -Tooltip 'Expected *.gparam.xml.patch files under Diffs, ignoring *_witchy-bnd4.xml.patch.'
+        [System.Windows.Controls.Grid]::SetColumnSpan($msg, 7)
+        Add-ParamTweaksGridChild -Child $msg -Row $rowIndex -Column 0
+        $TxtParamTweaksStatus.Text = 'No Yebis gparam patch rows found.'
+    }
+    else {
+        $TxtParamTweaksStatus.Text = ("Loaded {0} Yebis param tweak row(s)." -f $rowsAdded)
+    }
+
+    Restore-ParamTweaksUserValues
+    Update-ParamTweaksNameVisibility
+}
+
+
 function Build-MapRows {
     $widths = @('75', '210', '100', '100', '320', '120', '125', '185')
     foreach ($w in $widths) {
@@ -5763,6 +6761,33 @@ $TxtOutputRoot.Add_TextChanged({
         if (-not $root) { $root = $TxtToolRoot.Text.Trim() }
         New-Item -ItemType Directory -Path $root -Force | Out-Null
         Start-Process explorer.exe -ArgumentList "`"$root`""
+    }
+})
+
+
+
+
+(C 'BtnPatchParamTweaksFiles').Add_Click({
+    Invoke-SafeUiAction {
+        Invoke-PatchParamTweaksFiles
+    }
+})
+
+(C 'BtnGenerateParamTweaksPatches').Add_Click({
+    Invoke-SafeUiAction {
+        Invoke-GenerateParamTweaksPatches
+    }
+})
+
+$ChkShowParamTweaksSpoilers.Add_Click({
+    Invoke-SafeUiAction {
+        Update-ParamTweaksNameVisibility
+    }
+})
+
+(C 'BtnRefreshParamTweaks').Add_Click({
+    Invoke-SafeUiAction {
+        Build-ParamTweaksRows
     }
 })
 

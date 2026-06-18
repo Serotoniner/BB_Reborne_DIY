@@ -1,5 +1,5 @@
 diff --git a/m25_00_0000-gparambnd-dcx/m25_00_0000.gparam.xml b/m25_00_0000-gparambnd-dcx/m25_00_0000.gparam.xml
-index 7bc45b3..a02c3ef 100644
+index 5dabe92..4c3110d 100644
 --- a/m25_00_0000-gparambnd-dcx/m25_00_0000.gparam.xml
 +++ b/m25_00_0000-gparambnd-dcx/m25_00_0000.gparam.xml
 @@ -26,27 +26,27 @@
@@ -169,13 +169,14 @@ index 7bc45b3..a02c3ef 100644
          <value id="0">4</value>
        </param>
        <param name1="Yebis-Use GlareQuality" name2="GlareQuality" type="IntA">
--        <value id="0">2</value>
 +        <value id="0">0</value>
++      </param>
++      <param name1="Yebis-DepthOfFieldQuality" name2="DepthOfFieldQuality" type="IntA">
+         <value id="0">2</value>
        </param>
-       <param name1="Yebis-DepthOfFieldQuality" name2="DepthOfFieldQuality" type="IntA">
+-      <param name1="Yebis-DepthOfFieldQuality" name2="DepthOfFieldQuality" type="IntA">
 -        <value id="0">5</value>
-+        <value id="0">2</value>
-       </param>
+-      </param>
        <param name1="SceneSetting-  LightCollect- Auto Compute Enable" name2="Auto Compute Enable" type="BoolA">
 -        <value id="0">False</value>
 +        <value id="0">True</value>
@@ -198,8 +199,12 @@ index 7bc45b3..a02c3ef 100644
        </param>
      </group>
      <group name1="Tone Map[Yebis]" name2="Tone Map">
-@@ -755,7 +755,7 @@
-         <value id="0">3</value>
+@@ -752,10 +752,10 @@
+         <comment />
+       </comments>
+       <param name1="Yebis-ToneMapExposure" name2="Exposure" type="Float">
+-        <value id="0">3</value>
++        <value id="0">3</value>
        </param>
        <param name1="Yebis-Gamma" name2="Gamma" type="Float">
 -        <value id="0">2.2</value>
@@ -207,7 +212,16 @@ index 7bc45b3..a02c3ef 100644
        </param>
        <param name1="Yebis-ToneType" name2="ToneType" type="IntA">
          <value id="0">2</value>
-@@ -782,7 +782,7 @@
+@@ -770,7 +770,7 @@
+         <value id="0">0</value>
+       </param>
+       <param name1="Yebis-ColorS" name2="ColorS" type="Float">
+-        <value id="0">0.85</value>
++        <value id="0">0.85</value>
+       </param>
+       <param name1="Yebis-ColorV" name2="ColorV" type="Float">
+         <value id="0">1</value>
+@@ -782,10 +782,10 @@
          <value id="0">0</value>
        </param>
        <param name1="Yebis-DelayFrame" name2="DelayFrame" type="Float">
@@ -215,7 +229,11 @@ index 7bc45b3..a02c3ef 100644
 +        <value id="0">0.01</value>
        </param>
        <param name1="Yebis-MiddleGray" name2="MiddleGray" type="Float">
-         <value id="0">0.18</value>
+-        <value id="0">0.18</value>
++        <value id="0">0.18</value>
+       </param>
+       <param name1="Yebis-ToneInfluencedByGlare" name2="ToneInfluencedByGlare" type="Float">
+         <value id="0">1</value>
 @@ -824,13 +824,13 @@
          <value id="0">0.1</value>
        </param>
