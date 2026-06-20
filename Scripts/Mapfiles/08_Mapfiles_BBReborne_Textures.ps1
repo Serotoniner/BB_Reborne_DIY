@@ -39,6 +39,8 @@ param(
     [string]$TexturesRoot = "",
     [string]$TexconvExe = "",
     [string]$RealEsrganExe = "",
+    [string]$RealEsrganModelName = "",
+    [string]$RealEsrganModelFile = "",
     [string]$MagickExe = "",
 
     [string]$DiffuseScript = "",
@@ -253,8 +255,11 @@ function Invoke-TexturePipeline {
         if ($Keep) { $keepArgs += '-Keep' }
         $noUpscaleArgs = @()
         if ($NoUpscale) { $noUpscaleArgs += '-NoUpscale' }
+        $realEsrganModelArgs = @()
+        if (-not [string]::IsNullOrWhiteSpace($RealEsrganModelName)) { $realEsrganModelArgs += @('-RealEsrganModelName', $RealEsrganModelName) }
+        if (-not [string]::IsNullOrWhiteSpace($RealEsrganModelFile)) { $realEsrganModelArgs += @('-RealEsrganModelFile', $RealEsrganModelFile) }
 
-        $diffuseArgs = $commonArgs + @('-RealEsrganExe', $RealEsrganExe, '-ThrottleLimit', $GpuThrottleLimit) + $applyArgs + $keepArgs + $noUpscaleArgs
+        $diffuseArgs = $commonArgs + @('-RealEsrganExe', $RealEsrganExe, '-ThrottleLimit', $GpuThrottleLimit) + $realEsrganModelArgs + $applyArgs + $keepArgs + $noUpscaleArgs
         Invoke-PwshScript -Label '2/7 Upscale diffuse' -ScriptPath $DiffuseScript -Args $diffuseArgs
 
         $linearArgs = $commonArgs + $applyArgs + $keepArgs + $noUpscaleArgs

@@ -47,6 +47,7 @@
       - Lets the user choose which map rows and which per-map steps should run.
       - Provides TOTAL-row checkboxes that check/uncheck all enabled rows at once for each map step.
       - Provides a No texture upscale toggle that passes -NoUpscale to the texture step, keeping treatments while targeting 1x textures.
+      - Provides an optional Real-ESRGAN model file selector under the Real-ESRGAN setup row for the texture AI diffuse step.
 
     - Step 3: Param tweaks tab.
       - Scans gparam XML patch files under .\Diffs for the five Yebis params.
@@ -2538,6 +2539,7 @@ function New-MapRunnerScript {
     $outputRoot = $TxtOutputRoot.Text.Trim()
     $cpuThrottle = $TxtCpuThrottle.Text.Trim()
     $gpuThrottle = $TxtGpuThrottle.Text.Trim()
+    $realEsrganModelFile = $(if ($null -ne $TxtRealEsrganModelFile) { $TxtRealEsrganModelFile.Text.Trim() } else { '' })
     $noUpscaleTextures = ([bool]$ChkNoUpscaleTextures.IsChecked)
 
     $lines = New-Object System.Collections.Generic.List[string]
@@ -2568,6 +2570,9 @@ function New-MapRunnerScript {
 
         if ($step.Id -eq '08') {
             $args += @('-GpuThrottle', $gpuThrottle)
+            if (-not [string]::IsNullOrWhiteSpace($realEsrganModelFile)) {
+                $args += @('-RealEsrganModelFile', $realEsrganModelFile)
+            }
             if ($noUpscaleTextures) {
                 $args += '-NoUpscale'
             }
@@ -2748,6 +2753,9 @@ function Start-VisibleMapPatchProcess {
 
     if ([bool]$ChkNoUpscaleTextures.IsChecked) {
         Write-UiLog "$MapCode patches: texture step will use -NoUpscale."
+    }
+    if ($null -ne $TxtRealEsrganModelFile -and -not [string]::IsNullOrWhiteSpace($TxtRealEsrganModelFile.Text)) {
+        Write-UiLog "$MapCode patches: texture step will use Real-ESRGAN model file: $($TxtRealEsrganModelFile.Text)"
     }
 
     Write-UiLog "$MapCode patches: launching visible PowerShell process."
@@ -3038,6 +3046,9 @@ function Start-VisibleAllMapPatchProcess {
 
     if ([bool]$ChkNoUpscaleTextures.IsChecked) {
         Write-UiLog 'Run all patches: texture steps will use -NoUpscale.'
+    }
+    if ($null -ne $TxtRealEsrganModelFile -and -not [string]::IsNullOrWhiteSpace($TxtRealEsrganModelFile.Text)) {
+        Write-UiLog "Run all patches: texture steps will use Real-ESRGAN model file: $($TxtRealEsrganModelFile.Text)"
     }
 
     Write-UiLog 'Run all patches: launching visible PowerShell process.'
@@ -4120,6 +4131,8 @@ $TxtGpuInfo = C 'TxtGpuInfo'
 $TxtGpuThrottle = C 'TxtGpuThrottle'
 $TxtSystemRam = C 'TxtSystemRam'
 $TxtGpuVram = C 'TxtGpuVram'
+$TxtRealEsrganModelFile = $null
+$TxtRealEsrganDefaultModelPath = $null
 $TxtMemoryStatus = C 'TxtMemoryStatus'
 $TxtOutputPathProbe = C 'TxtOutputPathProbe'
 $TxtOutputDrive = C 'TxtOutputDrive'
@@ -4462,6 +4475,7 @@ function Refresh-AllRows {
     foreach ($tool in $Tools) {
         Refresh-ToolRow -Tool $tool
     }
+    Update-RealEsrganModelSelectorRow
 }
 
 function Test-RequiredToolsReady {
@@ -4544,6 +4558,55 @@ function Select-ExeDialog {
     }
 
     return $null
+}
+
+
+function Select-RealEsrganModelDialog {
+    param([AllowNull()][string]$InitialPath)
+
+    $dialog = New-Object System.Windows.Forms.OpenFileDialog
+    $dialog.Title = "Select Real-ESRGAN model file"
+    $dialog.Filter = "Real-ESRGAN model files (*.bin;*.param)|*.bin;*.param|All files (*.*)|*.*"
+    if ($InitialPath -and (Test-Path -LiteralPath $InitialPath)) {
+        $dialog.InitialDirectory = Split-Path -Parent $InitialPath
+        $dialog.FileName = Split-Path -Leaf $InitialPath
+    }
+
+    $result = $dialog.ShowDialog()
+    if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
+        return $dialog.FileName
+    }
+
+    return $null
+}
+
+function Get-DefaultBBReborneUpscalerModelPath {
+    $realEsrganTool = Get-ToolByKey -Key 'RE'
+    if ($realEsrganTool) {
+        $installDir = Get-ToolInstallDir -Tool $realEsrganTool
+        if (-not [string]::IsNullOrWhiteSpace($installDir)) {
+            return (Join-Path (Join-Path $installDir 'models') 'BBReborneUpscaler.bin')
+        }
+    }
+
+    $toolRoot = $TxtToolRoot.Text.Trim()
+    if (-not [string]::IsNullOrWhiteSpace($toolRoot)) {
+        return (Join-Path $toolRoot 'RealESRGAN\realesrgan-ncnn-vulkan-20220424-windows\models\BBReborneUpscaler.bin')
+    }
+
+    return ''
+}
+
+function Update-RealEsrganModelSelectorRow {
+    if ($null -ne $TxtRealEsrganDefaultModelPath) {
+        $defaultPath = Get-DefaultBBReborneUpscalerModelPath
+        if ([string]::IsNullOrWhiteSpace($defaultPath)) {
+            $TxtRealEsrganDefaultModelPath.Text = 'Default: BBReborneUpscaler'
+        }
+        else {
+            $TxtRealEsrganDefaultModelPath.Text = $defaultPath
+        }
+    }
 }
 
 function Invoke-WingetInstall {
@@ -4831,6 +4894,7 @@ function Get-PathConfig {
             cpuInfo           = $TxtCpuInfo.Text.Trim()
             gpuInfo           = $TxtGpuInfo.Text.Trim()
             gpuVram           = $TxtGpuVram.Text.Trim()
+            realEsrganModelFile = $(if ($null -ne $TxtRealEsrganModelFile) { $TxtRealEsrganModelFile.Text.Trim() } else { '' })
             outputDrive       = $TxtOutputDrive.Text.Trim()
             outputFreeSpace   = $TxtOutputFreeSpace.Text.Trim()
             outputSpaceStatus = $TxtOutputSpaceStatus.Text.Trim()
@@ -4883,6 +4947,12 @@ function Load-PathFiles {
             if ($config.runParams.cpuInfo) { $TxtCpuInfo.Text = [string]$config.runParams.cpuInfo }
             if ($config.runParams.gpuInfo) { $TxtGpuInfo.Text = [string]$config.runParams.gpuInfo }
             if ($config.runParams.gpuVram) { $TxtGpuVram.Text = [string]$config.runParams.gpuVram }
+            if ($config.runParams.realEsrganModelFile -and $null -ne $TxtRealEsrganModelFile) {
+                $TxtRealEsrganModelFile.Text = [string]$config.runParams.realEsrganModelFile
+                if ($RowControls.ContainsKey('RE') -and $null -ne $TxtRealEsrganModelFile) {
+                    # The optional model row is not stored in RowControls; this keeps loading harmless.
+                }
+            }
             if ($config.runParams.outputDrive) { $TxtOutputDrive.Text = [string]$config.runParams.outputDrive }
             if ($config.runParams.outputFreeSpace) { $TxtOutputFreeSpace.Text = [string]$config.runParams.outputFreeSpace }
             if ($config.runParams.outputSpaceStatus) { $TxtOutputSpaceStatus.Text = [string]$config.runParams.outputSpaceStatus }
@@ -4943,6 +5013,7 @@ function Save-PathFiles {
     $lines.Add('$BBR_CpuInfo = ' + (Quote-PSString $config.runParams.cpuInfo))
     $lines.Add('$BBR_GpuInfo = ' + (Quote-PSString $config.runParams.gpuInfo))
     $lines.Add('$BBR_GpuVram = ' + (Quote-PSString $config.runParams.gpuVram))
+    $lines.Add('$BBR_RealEsrganModelFile = ' + (Quote-PSString $config.runParams.realEsrganModelFile))
     $lines.Add('')
 
     foreach ($tool in $Tools) {
@@ -6599,6 +6670,84 @@ function Build-ToolRows {
         }.GetNewClosure())
 
         $rowIndex++
+
+        if ($tool.Key -eq 'RE') {
+            $rdModel = New-Object System.Windows.Controls.RowDefinition
+            $rdModel.Height = [System.Windows.GridLength]::Auto
+            [void]$ToolsGrid.RowDefinitions.Add($rdModel)
+
+            $modelName = New-TextBlockCell -Text 'Real-ESRGAN AI model' -Tooltip 'Optional model override for the AI diffuse texture step. Leave blank to use the default BBReborneUpscaler model.'
+            $modelStatus = New-TextBlockCell -Text 'Default / optional override'
+            $modelDefault = New-TextBoxCell -ReadOnly -Tooltip 'Default active BBReborneUpscaler model path used when no override is selected.'
+            $modelBox = New-TextBoxCell -Tooltip 'Optional .bin or .param model file. The matching .bin/.param pair must exist in the same folder. This only affects the AI diffuse texture step.'
+            $modelPanel = New-Object System.Windows.Controls.WrapPanel
+            $modelPanel.Margin = [System.Windows.Thickness]::new(4)
+            $modelBrowse = New-ButtonCell -Text 'Model...' -Width 78 -Tooltip 'Select a Real-ESRGAN .bin or .param model file.'
+            $modelClear = New-ButtonCell -Text 'Clear' -Width 62 -Tooltip 'Clear the model override and use BBReborneUpscaler.'
+
+            [void]$modelPanel.Children.Add($modelBrowse)
+            [void]$modelPanel.Children.Add($modelClear)
+
+            Add-GridChild -Child $modelName -Row $rowIndex -Column 0
+            Add-GridChild -Child $modelStatus -Row $rowIndex -Column 1
+            Add-GridChild -Child $modelDefault -Row $rowIndex -Column 2
+            Add-GridChild -Child $modelBox -Row $rowIndex -Column 3
+            Add-GridChild -Child $modelPanel -Row $rowIndex -Column 4
+
+            $script:TxtRealEsrganDefaultModelPath = $modelDefault
+            $script:TxtRealEsrganModelFile = $modelBox
+
+            $localModelBox = $modelBox
+            $localModelStatus = $modelStatus
+
+            $modelBrowse.Add_Click({
+                Invoke-SafeUiAction {
+                    $current = ''
+                    if ($null -ne $localModelBox) {
+                        $current = $localModelBox.Text
+                    }
+
+                    $selected = Select-RealEsrganModelDialog -InitialPath $current
+                    if ($selected -and $null -ne $localModelBox) {
+                        $localModelBox.Text = $selected
+                        if ($null -ne $script:TxtRealEsrganModelFile) {
+                            $script:TxtRealEsrganModelFile.Text = $selected
+                        }
+                        if ($null -ne $localModelStatus) {
+                            $localModelStatus.Text = 'Override selected'
+                        }
+                        Write-UiLog "Selected Real-ESRGAN model file: $selected"
+                    }
+                }
+            }.GetNewClosure())
+
+            $modelClear.Add_Click({
+                Invoke-SafeUiAction {
+                    if ($null -ne $localModelBox) {
+                        $localModelBox.Clear()
+                    }
+                    if ($null -ne $script:TxtRealEsrganModelFile) {
+                        $script:TxtRealEsrganModelFile.Clear()
+                    }
+                    if ($null -ne $localModelStatus) {
+                        $localModelStatus.Text = 'Default / optional override'
+                    }
+
+                    Write-UiLog 'Real-ESRGAN model override cleared. Default BBReborneUpscaler will be used.'
+
+                    try {
+                        Save-PathFiles -Silent
+                        Write-UiLog 'Real-ESRGAN model override clear saved to paths file.'
+                    }
+                    catch {
+                        Write-UiLog "Real-ESRGAN model override was cleared in the UI, but paths were not saved yet: $($_.Exception.Message)"
+                    }
+                }
+            }.GetNewClosure())
+
+            Update-RealEsrganModelSelectorRow
+            $rowIndex++
+        }
     }
 }
 
@@ -6663,6 +6812,7 @@ $TxtOutputRoot.Add_TextChanged({
         $selected = Select-FolderDialog -InitialPath $TxtToolRoot.Text
         if ($selected) {
             $TxtToolRoot.Text = $selected
+            Update-RealEsrganModelSelectorRow
             Refresh-AllRows
         }
     }

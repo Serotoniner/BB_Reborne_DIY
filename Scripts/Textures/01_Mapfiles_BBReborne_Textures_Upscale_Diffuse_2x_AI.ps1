@@ -15,6 +15,9 @@ param(
 [Parameter(Mandatory=$true)][string]$MagickExe,     #
 [Parameter(Mandatory=$true)][string]$RealEsrganExe, # 
 
+[string]$RealEsrganModelName = "BBReborneUpscaler",
+[string]$RealEsrganModelFile = "",
+
 [int]$ThrottleLimit = 1,
 [int]$ProgressEvery = 10,       # legacy print frequency (kept, but progress bars are primary now)
 [switch]$DryRun,
@@ -168,6 +171,52 @@ function Invoke-ParallelStageWithProgress {
 # --------------------------------------------------------------------------------------
 # Output + temp dirs (match Script #1 scheme: rooted at parent(RootDir), prefixed with leaf(RootDir))
 # --------------------------------------------------------------------------------------
+function Resolve-RealEsrganModelName {
+	param(
+		[Parameter(Mandatory=$true)][string]$ExePath,
+		[AllowNull()][string]$ModelName,
+		[AllowNull()][string]$ModelFile
+	)
+
+	$name = [string]$ModelName
+	if ([string]::IsNullOrWhiteSpace($name)) {
+		$name = "BBReborneUpscaler"
+	}
+
+	if ([string]::IsNullOrWhiteSpace($ModelFile)) {
+		return $name.Trim()
+	}
+
+	$modelPath = (Resolve-Path -LiteralPath $ModelFile).Path
+	$ext = [System.IO.Path]::GetExtension($modelPath).ToLowerInvariant()
+	if ($ext -ne ".bin" -and $ext -ne ".param") {
+		throw "Real-ESRGAN model file must be .bin or .param: $modelPath"
+	}
+
+	$modelDir = Split-Path -Parent $modelPath
+	$modelStem = [System.IO.Path]::GetFileNameWithoutExtension($modelPath)
+	$sourceBin = Join-Path $modelDir ($modelStem + ".bin")
+	$sourceParam = Join-Path $modelDir ($modelStem + ".param")
+
+	if (-not (Test-Path -LiteralPath $sourceBin -PathType Leaf)) {
+		throw "Real-ESRGAN model .bin not found: $sourceBin"
+	}
+	if (-not (Test-Path -LiteralPath $sourceParam -PathType Leaf)) {
+		throw "Real-ESRGAN model .param not found: $sourceParam"
+	}
+
+	$exeDir = Split-Path -Parent $ExePath
+	$activeModelsDir = Join-Path $exeDir "models"
+	[System.IO.Directory]::CreateDirectory($activeModelsDir) | Out-Null
+
+	Copy-Item -LiteralPath $sourceBin -Destination (Join-Path $activeModelsDir (Split-Path -Leaf $sourceBin)) -Force
+	Copy-Item -LiteralPath $sourceParam -Destination (Join-Path $activeModelsDir (Split-Path -Leaf $sourceParam)) -Force
+
+	return $modelStem
+}
+
+$ResolvedRealEsrganModelName = Resolve-RealEsrganModelName -ExePath $RealEsrganExe -ModelName $RealEsrganModelName -ModelFile $RealEsrganModelFile
+
 $rootFull   = (Resolve-Path -LiteralPath $RootDir).Path
 $rootFull   = $rootFull -replace '[\\/]+$',''
 $rootLeaf   = Split-Path $rootFull -Leaf
@@ -209,6 +258,7 @@ Write-Host "DryRun : $DryRun"
 Write-Host "Apply  : $Apply"
 Write-Host "Keep   : $Keep"
 Write-Host "ForceRebuild: $ForceRebuild"
+Write-Host "RealESRGAN model: $ResolvedRealEsrganModelName"
 Write-Host "Backup : " -NoNewline
 if ($Apply -and (-not $NoBackup)) { Write-Host $BackupDir } else { Write-Host "disabled" }
 Write-Host ""
@@ -592,7 +642,7 @@ if ($needBuild) {
 					if (-not $png1) { throw "Missing Png1Actual" }
 					
 					# --- CORE COMMAND (KEEP INTACT) ---
-					& $using:RealEsrganExe -i $png1 -o $png4 -n BBReborneUpscaler -f png 2>&1 | Add-Content -LiteralPath $log
+					& $using:RealEsrganExe -i $png1 -o $png4 -n $using:ResolvedRealEsrganModelName -f png 2>&1 | Add-Content -LiteralPath $log
 					#& $using:RealEsrganExe -i $png1 -o $png4 -n realisticrescaler -f png 2>&1 | Add-Content -LiteralPath $log
 					if (-not (Test-Path -LiteralPath $png4)) { throw "Real-ESRGAN did not produce PNG: $png4" }
 					
