@@ -49,6 +49,11 @@
       - Provides a No texture upscale toggle that passes -NoUpscale to the texture step, keeping treatments while targeting 1x textures.
       - Provides an optional Real-ESRGAN model file selector under the Real-ESRGAN setup row for the texture AI diffuse step.
 
+    - BBReborne Noir tab.
+      - Adds a separate Scripts\Noir location for experimental noir-aesthetic scripts, preserving Mapfiles-style wrappers.
+      - Documents the first-pass albedo desaturation rules for the Noir diffuse texture script.
+      - Runs selected Noir map steps from a Step-2-style map grid; Step 8 uses Scripts\Noir\Mapfiles\08_Mapfiles_BBReborne_Textures.ps1.
+
     - Step 3: Param tweaks tab.
       - Scans gparam XML patch files under .\Diffs for the five Yebis params.
       - Shows map/time rows with spoiler-safe raw codes or friendly labels.
@@ -1982,6 +1987,11 @@ function Start-VisibleGlobalPatchProcess {
 
     $pwsh = Get-PwshForWorkflow
 
+    $selectedGlobalSteps = @(Get-SelectedGlobalStepIds)
+    if ($selectedGlobalSteps.Count -eq 0) {
+        throw 'No Global steps are selected.'
+    }
+
     $argList = @(
         '-NoProfile',
         '-ExecutionPolicy', 'Bypass',
@@ -1994,10 +2004,39 @@ function Start-VisibleGlobalPatchProcess {
         '-PwshExe', $pwsh
     )
 
+    $allGlobalSteps = @((Get-GlobalStepDefinitions) | Where-Object { $_.Enabled -eq $true } | ForEach-Object { [string]$_.Id })
+    $selectedSet = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($stepId in $selectedGlobalSteps) { [void]$selectedSet.Add([string]$stepId) }
+    $isFullGlobalSelection = ($selectedGlobalSteps.Count -eq $allGlobalSteps.Count)
+    if ($isFullGlobalSelection) {
+        foreach ($stepId in $allGlobalSteps) {
+            if (-not $selectedSet.Contains([string]$stepId)) { $isFullGlobalSelection = $false; break }
+        }
+    }
+
+    $runnerSupportsOnlySteps = $false
+    try {
+        $runnerHead = Get-Content -LiteralPath $runner -Raw -ErrorAction Stop
+        $runnerSupportsOnlySteps = ($runnerHead -match '\$OnlySteps')
+    } catch {
+        $runnerSupportsOnlySteps = $false
+    }
+
+    if (-not $isFullGlobalSelection) {
+        if (-not $runnerSupportsOnlySteps) {
+            throw "The Global runner does not support per-step checkboxes yet. Copy the updated 00_Run_Global_BBReborne_All.ps1 into Scripts\Global, then try again. Runner: $runner"
+        }
+        $argList += @('-OnlySteps')
+        foreach ($stepId in $selectedGlobalSteps) { $argList += $stepId }
+    }
+
     $argLine = Join-WindowsCommandLine -Arguments $argList
 
     Write-UiLog 'GLOBAL patches: launching visible PowerShell process.'
-    Write-UiLog 'A separate PowerShell window will stay open while the global scripts run.'
+    Write-UiLog ("Selected Global steps: {0}" -f ($selectedGlobalSteps -join ', '))
+    if ($isFullGlobalSelection) { Write-UiLog 'Global runner: all steps selected; launching without -OnlySteps for compatibility.' }
+    elseif ($runnerSupportsOnlySteps) { Write-UiLog 'Global runner: using -OnlySteps for the selected Global checkboxes.' }
+    Write-UiLog 'A separate PowerShell window will close automatically when the global scripts finish.'
     Write-UiLog 'Do not click other windows while WitchyBND is waiting for its menu input.'
     Write-UiLog "Runner: $runner"
 
@@ -2389,6 +2428,42 @@ function New-MapStepDefinition {
     }
 }
 
+
+function Get-GlobalStepDefinitions {
+    $globalScriptsRoot = Join-Path $scriptRoot 'Scripts\Global'
+    @(
+        (New-MapStepDefinition -Id '01' -Name 'SFX remove player light'  -Script (Join-Path $globalScriptsRoot '01_Global_BBReborne_SFX_RemovePlayerLight.ps1')       -Enabled $true -Reason ''),
+        (New-MapStepDefinition -Id '02' -Name 'SFX M25 merge'            -Script (Join-Path $globalScriptsRoot '02_Global_BBReborne_SFX_M25.ps1')                     -Enabled $true -Reason ''),
+        (New-MapStepDefinition -Id '03' -Name 'Menu fe.gfx'              -Script (Join-Path $globalScriptsRoot '03_Global_BBReborne_Menu_fe.ps1')                      -Enabled $true -Reason ''),
+        (New-MapStepDefinition -Id '04' -Name 'GParam gameparam'         -Script (Join-Path $globalScriptsRoot '04_Global_BBReborne_Gparam_GameParam.ps1')              -Enabled $true -Reason ''),
+        (New-MapStepDefinition -Id '05' -Name 'OBJ from diffs'           -Script (Join-Path $globalScriptsRoot '05_Global_BBReborne_Obj_FromDiffs.ps1')                 -Enabled $true -Reason ''),
+        (New-MapStepDefinition -Id '06' -Name 'Param drawparam default'  -Script (Join-Path $globalScriptsRoot '06_Global_BBReborne_Param_DefaultDrawparam.ps1')        -Enabled $true -Reason ''),
+        (New-MapStepDefinition -Id '07' -Name 'OBJ embedded textures'    -Script (Join-Path $globalScriptsRoot '07_Global_BBReborne_Obj_Textures.ps1')                  -Enabled $true -Reason '')
+    )
+}
+
+function Get-GlobalStepCheckboxSelected {
+    param([Parameter(Mandatory)][string]$StepId)
+
+    if (-not $GlobalStepCheckControls -or $GlobalStepCheckControls.Count -le 0) { return $true }
+    if (-not $GlobalStepCheckControls.ContainsKey($StepId)) { return $true }
+
+    $cb = $GlobalStepCheckControls[$StepId]
+    if ($null -eq $cb) { return $true }
+    if ($cb.IsEnabled -ne $true) { return $false }
+    return ($cb.IsChecked -eq $true)
+}
+
+function Get-SelectedGlobalStepIds {
+    $selected = @()
+    foreach ($step in @(Get-GlobalStepDefinitions)) {
+        if ($step.Enabled -eq $true -and (Get-GlobalStepCheckboxSelected -StepId ([string]$step.Id))) {
+            $selected += [string]$step.Id
+        }
+    }
+    return @($selected)
+}
+
 function Get-MapStepDefinitions {
     param([Parameter(Mandatory)][string]$MapCode)
 
@@ -2532,7 +2607,8 @@ function New-MapRunnerScript {
         [Parameter(Mandatory)][string]$RunnerPath,
         [Parameter(Mandatory)][string]$SummaryPath,
         [Parameter(Mandatory)][string]$ToolPathsPs1,
-        [Parameter(Mandatory)][string]$PwshExe
+        [Parameter(Mandatory)][string]$PwshExe,
+        [switch]$UseNoirTextures
     )
 
     $gameRoot = $TxtGameRoot.Text.Trim()
@@ -2540,7 +2616,7 @@ function New-MapRunnerScript {
     $cpuThrottle = $TxtCpuThrottle.Text.Trim()
     $gpuThrottle = $TxtGpuThrottle.Text.Trim()
     $realEsrganModelFile = $(if ($null -ne $TxtRealEsrganModelFile) { $TxtRealEsrganModelFile.Text.Trim() } else { '' })
-    $noUpscaleTextures = ([bool]$ChkNoUpscaleTextures.IsChecked)
+    $noUpscaleTextures = if ($UseNoirTextures) { ([bool](C 'ChkNoirNoUpscaleTextures').IsChecked) } else { ([bool]$ChkNoUpscaleTextures.IsChecked) }
 
     $lines = New-Object System.Collections.Generic.List[string]
     $lines.Add('$ErrorActionPreference = ''Stop''')
@@ -2575,6 +2651,9 @@ function New-MapRunnerScript {
             }
             if ($noUpscaleTextures) {
                 $args += '-NoUpscale'
+            }
+            if ($UseNoirTextures) {
+                $args += '-Noir'
             }
         }
 
@@ -4104,6 +4183,51 @@ $Tools = @(
                 </Grid>
             </TabItem>
 
+
+
+            <TabItem Header="BBReborne Noir">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Padding="12" CornerRadius="8" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" Background="{StaticResource PanelBrush}">
+                        <TextBlock TextWrapping="Wrap" FontSize="14">
+                            Experimental spin-off workflow for a noir aesthetic. This tab mirrors the map-step layout from Step 2, but uses the separate Scripts\Noir tree. Current first pass: Step 8 Textures uses Scripts\Noir\Mapfiles\08_Mapfiles_BBReborne_Textures.ps1, which forwards -Noir to the Noir diffuse texture worker.
+                        </TextBlock>
+                    </Border>
+
+                    <GroupBox Grid.Row="1" Header="Noir file generation" Margin="0,12,0,10" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}">
+                        <Grid Margin="10">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" TextWrapping="Wrap" Margin="4,0,4,10">
+                                Noir scripts are intentionally separate from the main BB Reborne scripts. Future Noir map steps can be added under Scripts\Noir\Mapfiles. For now, Step 8 Textures is available and writes to BBReborne_noir_textures.
+                            </TextBlock>
+
+                            <DockPanel Grid.Row="1" LastChildFill="False" Margin="4,0,4,10">
+                                <TextBlock DockPanel.Dock="Left" Name="TxtNoirRunStatus" Text="Noir map rows use the separate Scripts\Noir folder." VerticalAlignment="Center"/>
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                    <CheckBox Name="ChkShowNoirMapNames" Content="Show name spoilers" Margin="0,4,12,0" Foreground="{StaticResource TextBrush}" ToolTip="Display map names instead of hidden spoiler-safe labels."/>
+                                    <CheckBox Name="ChkNoirNoUpscaleTextures" Content="No texture upscale" Margin="0,4,12,0" Foreground="{StaticResource TextBrush}" ToolTip="Pass -NoUpscale to the Noir texture step."/>
+                                    <Button Name="BtnRunAllNoirMapPatches" Content="Run all Noir patches" Width="145" Height="28" Margin="0,0,8,0" ToolTip="Run selected Noir map steps for every map."/>
+                                    <Button Name="BtnOpenNoirScriptsFolder" Content="Open Noir scripts" Width="130" Height="28" ToolTip="Open Scripts\Noir under this tool folder."/>
+                                </StackPanel>
+                            </DockPanel>
+
+                            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                                <Grid Name="NoirMapsGrid"/>
+                            </ScrollViewer>
+                        </Grid>
+                    </GroupBox>
+                </Grid>
+            </TabItem>
+
         </TabControl>
     </Grid>
 </Window>
@@ -4151,11 +4275,21 @@ $TxtOutputRoot.Text = $defaultOutputRoot
 $TxtDownloadDir.Text = $defaultDownloadDir
 $TxtToolRoot.Text = $defaultToolRoot
 
+$NoirMapsGrid = C 'NoirMapsGrid'
+
 $RowControls = @{}
 $MapRowControls = @{}
 $MapStepCheckControls = @{}
 $MapStepBulkCheckControls = @{}
 $script:IsUpdatingMapStepBulkChecks = $false
+$GlobalStepCheckControls = @{}
+$NoirMapRowControls = @{}
+$NoirMapStepCheckControls = @{}
+$NoirMapStepBulkCheckControls = @{}
+$script:IsUpdatingNoirMapStepBulkChecks = $false
+$NoirTotalsControls = @{}
+$NoirScopeElapsedSeconds = @{}
+$NoirScopeCompleted = @{}
 $ParamTweaksRowControls = @()
 $TotalsControls = @{}
 $ScopeElapsedSeconds = @{}
@@ -4164,7 +4298,7 @@ $ScopeCompleted = @{}
 # Reference elapsed times captured from a full successful run.
 # Map estimates are scaled from these references as new completed map timings are reported.
 $ScopeReferenceSeconds = [ordered]@{
-    GLOBAL = 69.0
+    GLOBAL = 2462.0
     M21    = 1210.0
     M22    = 1797.0
     M23    = 2550.0
@@ -4476,6 +4610,9 @@ function Refresh-AllRows {
         Refresh-ToolRow -Tool $tool
     }
     Update-RealEsrganModelSelectorRow
+    if ($NoirMapsGrid -and $NoirMapsGrid.Children.Count -gt 0) {
+        Refresh-NoirMapStepCheckboxAvailability
+    }
 }
 
 function Test-RequiredToolsReady {
@@ -5153,37 +5290,50 @@ function New-StepCheckboxPanel {
 
     $byStep = @{}
     $steps = @()
-    if (-not $IsGlobal) {
+    if ($IsGlobal) {
+        try { $steps = @(Get-GlobalStepDefinitions) } catch { $steps = @() }
+    }
+    else {
         try { $steps = @(Get-MapStepDefinitions -MapCode $MapCode) } catch { $steps = @() }
     }
 
-    for ($i = 1; $i -le 8; $i++) {
+    $maxStep = if ($IsGlobal) { 7 } else { 8 }
+    for ($i = 1; $i -le $maxStep; $i++) {
         $id = ('{0:00}' -f $i)
+        $step = @($steps | Where-Object { $_.Id -eq $id } | Select-Object -First 1)
+
         $cb = New-Object System.Windows.Controls.CheckBox
-        $cb.Content = [string]$i
         $cb.Margin = [System.Windows.Thickness]::new(6,0,6,0)
-        $cb.MinWidth = 28
         $cb.VerticalAlignment = 'Center'
         $cb.IsChecked = $true
         $cb.Tag = $id
 
         if ($IsGlobal) {
-            $cb.IsEnabled = $false
-            $cb.IsChecked = $false
-            $cb.Opacity = 0.25
-            $cb.ToolTip = 'Map steps only'
-        }
-        else {
-            $step = @($steps | Where-Object { $_.Id -eq $id } | Select-Object -First 1)
+            # Global appears as its own row in the map-style scope grid. Keep the
+            # visible checkbox text numeric like the map rows, and put the step
+            # description only in the mouseover tooltip.
+            $cb.Content = [string]$i
+            $cb.MinWidth = 28
             if ($step.Count -gt 0) {
                 $cb.ToolTip = ("{0} {1}" -f $step[0].Id, $step[0].Name)
-                if ($step[0].Enabled -ne $true) {
-                    $cb.IsChecked = $false
-                    $cb.IsEnabled = $false
-                    $cb.Opacity = 0.35
-                    $cb.ToolTip = ("{0} {1}: {2}" -f $step[0].Id, $step[0].Name, $step[0].Reason)
-                }
             }
+            else {
+                $cb.ToolTip = "Global step $i"
+            }
+        }
+        else {
+            $cb.Content = [string]$i
+            $cb.MinWidth = 28
+            if ($step.Count -gt 0) {
+                $cb.ToolTip = ("{0} {1}" -f $step[0].Id, $step[0].Name)
+            }
+        }
+
+        if ($step.Count -gt 0 -and $step[0].Enabled -ne $true) {
+            $cb.IsChecked = $false
+            $cb.IsEnabled = $false
+            $cb.Opacity = 0.35
+            $cb.ToolTip = ("{0} {1}: {2}" -f $step[0].Id, $step[0].Name, $step[0].Reason)
         }
 
         if (-not $IsGlobal) {
@@ -5198,7 +5348,8 @@ function New-StepCheckboxPanel {
         $byStep[$id] = $cb
     }
 
-    if (-not $IsGlobal) { $MapStepCheckControls[$MapCode] = $byStep }
+    if ($IsGlobal) { $GlobalStepCheckControls.Clear(); foreach ($k in $byStep.Keys) { $GlobalStepCheckControls[$k] = $byStep[$k] } }
+    else { $MapStepCheckControls[$MapCode] = $byStep }
     return $panel
 }
 
@@ -6425,7 +6576,817 @@ function Build-ParamTweaksRows {
 }
 
 
+
+function Add-NoirMapGridChild {
+    param(
+        [Parameter(Mandatory)]$Child,
+        [Parameter(Mandatory)][int]$Row,
+        [Parameter(Mandatory)][int]$Column
+    )
+
+    [System.Windows.Controls.Grid]::SetRow($Child, $Row)
+    [System.Windows.Controls.Grid]::SetColumn($Child, $Column)
+    [void]$NoirMapsGrid.Children.Add($Child)
+}
+
+function Get-NoirMapStepDefinitions {
+    param([Parameter(Mandatory)][string]$MapCode)
+
+    $mapCodeText = [string]$MapCode
+    $noirMapScriptsRoot = Join-Path (Join-Path (Join-Path $scriptRoot 'Scripts') 'Noir') 'Mapfiles'
+
+    $flverAvailability = Get-MapFlverAvailability -MapCode $mapCodeText
+    $msbAvailability = Get-MapMsbAvailability -MapCode $mapCodeText
+    $btlAvailability = Get-MapBtlAvailability -MapCode $mapCodeText
+    $btpbAvailability = Get-MapBtpbAvailability -MapCode $mapCodeText
+    $sparamAvailability = Get-MapSparamAvailability -MapCode $mapCodeText
+    $enableGI = [bool](Get-MapBackendOption -MapCode $mapCodeText -Name 'EnableGI' -DefaultValue $false)
+    $hasGiInputs = [bool](Test-MapGiInputsAvailable -MapCode $mapCodeText)
+    $giEnabled = [bool]$enableGI
+    $giReason = ''
+    if (-not $enableGI) { $giReason = 'GI disabled in $MapPatchBackend' }
+    elseif (-not $hasGiInputs) { $giReason = 'GI enabled in backend; no GI .tpfbdt/.tpfbhd input pair found yet' }
+
+    $rawSteps = @(
+        [pscustomobject]@{ Id='01'; Name='01';        Script=(Join-Path $noirMapScriptsRoot '01_Mapfiles_BBReborne_FLVER.ps1');                BaseEnabled=[bool]$flverAvailability.Enabled;  BaseReason=[string]$flverAvailability.Reason; ToolTip='SFX remove player light' },
+        [pscustomobject]@{ Id='02'; Name='02';    Script=(Join-Path $noirMapScriptsRoot '02_Mapfiles_BBReborne_Map.ps1');                  BaseEnabled=[bool]$msbAvailability.Enabled;    BaseReason=[string]$msbAvailability.Reason; ToolTip='SFX remove player light references' },
+        [pscustomobject]@{ Id='03'; Name='03'; Script=(Join-Path $noirMapScriptsRoot '03_Mapfiles_BBReborne_Maplight_BTL.ps1');         BaseEnabled=[bool]$btlAvailability.Enabled;    BaseReason=[string]$btlAvailability.Reason; ToolTip='Menu fe patch' },
+        [pscustomobject]@{ Id='04'; Name='04'; Script=(Join-Path $noirMapScriptsRoot '04_Mapfiles_BBReborne_Maplight_BTPB.ps1');        BaseEnabled=[bool]$btpbAvailability.Enabled;   BaseReason=[string]$btpbAvailability.Reason; ToolTip='GParam gameparam patches' },
+        [pscustomobject]@{ Id='05'; Name='05';        Script=(Join-Path $noirMapScriptsRoot '05_Mapfiles_BBReborne_Param.ps1');                BaseEnabled=$true;                             BaseReason=''; ToolTip='OBJ from diffs' },
+        [pscustomobject]@{ Id='06'; Name='06';       Script=(Join-Path $noirMapScriptsRoot '06_Mapfiles_BBReborne_Sparam.ps1');               BaseEnabled=[bool]$sparamAvailability.Enabled; BaseReason=[string]$sparamAvailability.Reason; ToolTip='Draw/global params' },
+        [pscustomobject]@{ Id='07'; Name='07';           Script=(Join-Path $noirMapScriptsRoot '07_Mapfiles_BBReborne_GI.ps1');                   BaseEnabled=$giEnabled;                        BaseReason=$giReason; ToolTip='OBJ embedded textures' },
+        [pscustomobject]@{ Id='08'; Name='Textures';     Script=(Join-Path $noirMapScriptsRoot '08_Mapfiles_BBReborne_Textures.ps1');             BaseEnabled=$true;                             BaseReason='' }
+    )
+
+    $steps = @()
+    foreach ($step in $rawSteps) {
+        $exists = Test-Path -LiteralPath ([string]$step.Script) -PathType Leaf
+        $enabled = ([bool]$step.BaseEnabled) -and $exists
+        $reason = [string]$step.BaseReason
+        if (-not $exists) { $reason = 'No Noir step script yet' }
+        elseif (-not $enabled -and [string]::IsNullOrWhiteSpace($reason)) { $reason = 'Disabled for this map' }
+
+        $steps += (New-MapStepDefinition -Id ([string]$step.Id) -Name ([string]$step.Name) -Script ([string]$step.Script) -Enabled $enabled -Reason $reason)
+    }
+
+    return $steps
+}
+
+function Get-NoirMapStepCheckboxSelected {
+    param(
+        [Parameter(Mandatory)][string]$MapCode,
+        [Parameter(Mandatory)][string]$StepId
+    )
+
+    if ($NoirMapStepCheckControls.ContainsKey($MapCode)) {
+        $byStep = $NoirMapStepCheckControls[$MapCode]
+        if ($byStep -and $byStep.ContainsKey($StepId)) {
+            return ([bool]$byStep[$StepId].IsChecked)
+        }
+    }
+    return $true
+}
+
+function Get-EffectiveNoirMapSteps {
+    param([Parameter(Mandatory)][string]$MapCode)
+
+    $allSteps = @()
+    foreach ($step in @(Get-NoirMapStepDefinitions -MapCode ([string]$MapCode))) {
+        $allSteps += $step
+    }
+
+    $enabledSteps = @()
+    $skippedSteps = @()
+
+    foreach ($step in $allSteps) {
+        $stepId = [string]$step.Id
+        $stepName = [string]$step.Name
+        $stepScript = [string]$step.Script
+
+        if ([bool]$step.Enabled -ne $true) {
+            $skippedSteps += (New-MapStepDefinition -Id $stepId -Name $stepName -Script $stepScript -Enabled $false -Reason ([string]$step.Reason))
+            continue
+        }
+
+        if (-not (Get-NoirMapStepCheckboxSelected -MapCode ([string]$MapCode) -StepId $stepId)) {
+            $skippedSteps += (New-MapStepDefinition -Id $stepId -Name $stepName -Script $stepScript -Enabled $false -Reason 'Unchecked in UI')
+            continue
+        }
+
+        $enabledSteps += (New-MapStepDefinition -Id $stepId -Name $stepName -Script $stepScript -Enabled $true -Reason '')
+    }
+
+    return @{
+        All     = @($allSteps)
+        Enabled = @($enabledSteps)
+        Skipped = @($skippedSteps)
+    }
+}
+
+function New-NoirStepCheckboxPanel {
+    param([Parameter(Mandatory)][string]$MapCode)
+
+    $panel = New-Object System.Windows.Controls.StackPanel
+    $panel.Orientation = [System.Windows.Controls.Orientation]::Horizontal
+    $panel.Margin = [System.Windows.Thickness]::new(2)
+    $panel.VerticalAlignment = 'Center'
+    $panel.MinWidth = 300
+
+    $byStep = @{}
+    $steps = @(Get-NoirMapStepDefinitions -MapCode $MapCode)
+
+    for ($i = 1; $i -le 8; $i++) {
+        $id = ('{0:00}' -f $i)
+        $cb = New-Object System.Windows.Controls.CheckBox
+        $cb.Content = [string]$i
+        $cb.Margin = [System.Windows.Thickness]::new(6,0,6,0)
+        $cb.MinWidth = 28
+        $cb.VerticalAlignment = 'Center'
+        $cb.IsChecked = $true
+        $cb.Tag = $id
+
+        $step = @($steps | Where-Object { $_.Id -eq $id } | Select-Object -First 1)
+        if ($step.Count -gt 0) {
+            $cb.ToolTip = ("{0} {1}" -f $step[0].Id, $step[0].Name)
+            if ($step[0].Enabled -ne $true) {
+                $cb.IsChecked = $false
+                $cb.IsEnabled = $false
+                $cb.Opacity = 0.35
+                $cb.ToolTip = ("{0} {1}: {2}" -f $step[0].Id, $step[0].Name, $step[0].Reason)
+            }
+        }
+
+        $cb.Add_Click({
+            if (-not $script:IsUpdatingNoirMapStepBulkChecks) {
+                Update-NoirMapStepBulkCheckboxState
+            }
+        }.GetNewClosure())
+
+        [void]$panel.Children.Add($cb)
+        $byStep[$id] = $cb
+    }
+
+    $NoirMapStepCheckControls[$MapCode] = $byStep
+    return $panel
+}
+
+function Get-EnabledNoirMapStepCheckboxesForStep {
+    param([Parameter(Mandatory)][string]$StepId)
+
+    $items = @()
+    foreach ($mapEntry in $NoirMapStepCheckControls.GetEnumerator()) {
+        $byStep = $mapEntry.Value
+        if ($null -eq $byStep) { continue }
+        if (-not $byStep.ContainsKey($StepId)) { continue }
+
+        $cb = $byStep[$StepId]
+        if ($null -eq $cb) { continue }
+        if ($cb.IsEnabled -eq $true) { $items += $cb }
+    }
+
+    return @($items)
+}
+
+function Set-NoirMapStepCheckboxesForAllMaps {
+    param(
+        [Parameter(Mandatory)][string]$StepId,
+        [Parameter(Mandatory)][bool]$IsChecked
+    )
+
+    $script:IsUpdatingNoirMapStepBulkChecks = $true
+    try {
+        foreach ($cb in @(Get-EnabledNoirMapStepCheckboxesForStep -StepId $StepId)) {
+            $cb.IsChecked = $IsChecked
+        }
+    }
+    finally {
+        $script:IsUpdatingNoirMapStepBulkChecks = $false
+    }
+
+    Update-NoirMapStepBulkCheckboxState
+}
+
+function Update-NoirMapStepBulkCheckboxState {
+    if (-not $NoirMapStepBulkCheckControls -or $NoirMapStepBulkCheckControls.Count -le 0) { return }
+
+    $script:IsUpdatingNoirMapStepBulkChecks = $true
+    try {
+        for ($i = 1; $i -le 8; $i++) {
+            $id = ('{0:00}' -f $i)
+            if (-not $NoirMapStepBulkCheckControls.ContainsKey($id)) { continue }
+
+            $bulkCb = $NoirMapStepBulkCheckControls[$id]
+            $enabledBoxes = @(Get-EnabledNoirMapStepCheckboxesForStep -StepId $id)
+
+            if ($enabledBoxes.Count -le 0) {
+                $bulkCb.IsEnabled = $false
+                $bulkCb.IsChecked = $false
+                $bulkCb.Opacity = 0.35
+                $bulkCb.ToolTip = "Noir step $i is unavailable for all maps."
+                continue
+            }
+
+            $checkedCount = @($enabledBoxes | Where-Object { $_.IsChecked -eq $true }).Count
+            $bulkCb.IsEnabled = $true
+            $bulkCb.Opacity = 1.0
+            $bulkCb.ToolTip = "Check/uncheck Noir step $i for all maps. Mixed state means only some enabled maps are selected."
+
+            if ($checkedCount -eq $enabledBoxes.Count) { $bulkCb.IsChecked = $true }
+            elseif ($checkedCount -eq 0) { $bulkCb.IsChecked = $false }
+            else { $bulkCb.IsChecked = $null }
+        }
+    }
+    finally {
+        $script:IsUpdatingNoirMapStepBulkChecks = $false
+    }
+}
+
+function New-NoirStepBulkCheckboxPanel {
+    $panel = New-Object System.Windows.Controls.StackPanel
+    $panel.Orientation = [System.Windows.Controls.Orientation]::Horizontal
+    $panel.Margin = [System.Windows.Thickness]::new(2)
+    $panel.VerticalAlignment = 'Center'
+    $panel.MinWidth = 300
+
+    for ($i = 1; $i -le 8; $i++) {
+        $id = ('{0:00}' -f $i)
+
+        $cb = New-Object System.Windows.Controls.CheckBox
+        $cb.Content = [string]$i
+        $cb.Margin = [System.Windows.Thickness]::new(6,0,6,0)
+        $cb.MinWidth = 28
+        $cb.VerticalAlignment = 'Center'
+        $cb.IsThreeState = $true
+        $cb.IsChecked = $true
+        $cb.Tag = $id
+        $cb.ToolTip = "Check/uncheck Noir step $i for all maps."
+
+        $localStepId = $id
+        $localCheckBox = $cb
+
+        $cb.Add_PreviewMouseLeftButtonDown({
+            if ($script:IsUpdatingNoirMapStepBulkChecks) { return }
+
+            $currentlyChecked = ($localCheckBox.IsChecked -eq $true)
+            Set-NoirMapStepCheckboxesForAllMaps -StepId $localStepId -IsChecked (-not $currentlyChecked)
+
+            $_.Handled = $true
+        }.GetNewClosure())
+
+        [void]$panel.Children.Add($cb)
+        $NoirMapStepBulkCheckControls[$id] = $cb
+    }
+
+    return $panel
+}
+
+function Refresh-NoirMapStepCheckboxAvailability {
+    foreach ($map in $Maps) {
+        $mapCode = [string]$map.Code
+        if (-not $NoirMapStepCheckControls.ContainsKey($mapCode)) { continue }
+
+        $steps = @(Get-NoirMapStepDefinitions -MapCode $mapCode)
+        foreach ($step in $steps) {
+            $stepId = [string]$step.Id
+            if (-not $NoirMapStepCheckControls[$mapCode].ContainsKey($stepId)) { continue }
+
+            $cb = $NoirMapStepCheckControls[$mapCode][$stepId]
+            $cb.IsEnabled = [bool]$step.Enabled
+            if (-not $step.Enabled) {
+                $cb.IsChecked = $false
+                $cb.Opacity = 0.35
+                $cb.ToolTip = ("{0} {1}: {2}" -f $step.Id, $step.Name, $step.Reason)
+            }
+            else {
+                $cb.Opacity = 1.0
+                if ($null -eq $cb.IsChecked) { $cb.IsChecked = $true }
+                $cb.ToolTip = ("{0} {1}" -f $step.Id, $step.Name)
+            }
+        }
+    }
+
+    Update-NoirMapStepBulkCheckboxState
+}
+
+function Update-NoirMapNameVisibility {
+    $showNames = (C 'ChkShowNoirMapNames').IsChecked -eq $true
+
+    foreach ($map in $Maps) {
+        if (-not $NoirMapRowControls.ContainsKey($map.Code)) { continue }
+        if ($showNames) { $NoirMapRowControls[$map.Code].Name.Text = $map.Name }
+        else { $NoirMapRowControls[$map.Code].Name.Text = 'Hidden' }
+    }
+}
+
+function Update-NoirEstimateDisplay {
+    foreach ($entry in $NoirMapRowControls.GetEnumerator()) {
+        $scopeCode = [string]$entry.Key
+        if (-not $ScopeReferenceSeconds.Contains($scopeCode)) { continue }
+        $entry.Value.Estimate.Text = (Get-ScopeEstimateText -ScopeCode $scopeCode)
+    }
+
+    if ($NoirTotalsControls.ContainsKey('Estimate')) {
+        $NoirTotalsControls.Estimate.Text = (Format-ElapsedSeconds -Seconds (Get-ScaledReferenceTotalSeconds))
+    }
+}
+
+function Update-NoirTotals {
+    if (-not $NoirTotalsControls.ContainsKey('Status')) { return }
+
+    $totalTargets = $Maps.Count
+    $completedCount = @($NoirScopeCompleted.GetEnumerator() | Where-Object { $_.Value -eq $true }).Count
+    $elapsedTotal = 0.0
+
+    foreach ($value in $NoirScopeElapsedSeconds.Values) {
+        $elapsedTotal += [double]$value
+    }
+
+    $NoirTotalsControls.Estimate.Text = (Format-ElapsedSeconds -Seconds (Get-ScaledReferenceTotalSeconds))
+    $NoirTotalsControls.Elapsed.Text = (Format-ElapsedSeconds -Seconds $elapsedTotal)
+    $NoirTotalsControls.Status.Text = "$completedCount / $totalTargets completed"
+}
+
+function Set-NoirScopeElapsed {
+    param(
+        [Parameter(Mandatory)][string]$ScopeCode,
+        [Parameter(Mandatory)][double]$Seconds,
+        [switch]$Completed
+    )
+
+    $NoirScopeElapsedSeconds[$ScopeCode] = $Seconds
+    if ($Completed) { $NoirScopeCompleted[$ScopeCode] = $true }
+
+    if ($NoirMapRowControls.ContainsKey($ScopeCode)) {
+        $NoirMapRowControls[$ScopeCode].Elapsed.Text = (Format-ElapsedSeconds -Seconds $Seconds)
+        if ($Completed) { $NoirMapRowControls[$ScopeCode].Status.Text = 'Completed' }
+    }
+
+    Update-NoirEstimateDisplay
+    Update-NoirTotals
+}
+
+function Test-NoirGeneratedFilesForScope {
+    param(
+        [Parameter(Mandatory)][string]$Scope,
+        [Parameter(Mandatory)][string]$MapCode
+    )
+
+    $outputRoot = $TxtOutputRoot.Text.Trim()
+    if ([string]::IsNullOrWhiteSpace($outputRoot)) { return 'Output folder empty' }
+
+    $noirMapRoot = Join-Path (Join-Path (Join-Path $outputRoot 'BBReborne_noir_textures') 'map') ''
+    if (-not (Test-Path -LiteralPath $noirMapRoot -PathType Container)) {
+        Write-UiLog "$Scope Noir check: output folder not found: $noirMapRoot"
+        return 'No output folder'
+    }
+
+    $folders = @(Get-MapFoldersForMapCode -MapCode $MapCode)
+    $hits = @()
+    foreach ($folder in $folders) {
+        $escaped = [regex]::Escape($folder)
+        $hits += @(Get-ChildItem -LiteralPath $noirMapRoot -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match $escaped })
+    }
+
+    $count = @($hits | Select-Object -Unique).Count
+    Write-UiLog ("{0} Noir check: generated texture files={1} under {2}" -f $Scope, $count, $noirMapRoot)
+
+    if ($count -gt 0) { return ("Generated ({0})" -f $count) }
+    return 'Missing Noir textures'
+}
+
+function Start-VisibleNoirMapPatchProcess {
+    param([Parameter(Mandatory)][string]$MapCode)
+
+    Ensure-ModOutputFolders
+    Save-PathFiles -Silent
+
+    $toolRoot = $TxtToolRoot.Text.Trim()
+    if ([string]::IsNullOrWhiteSpace($toolRoot)) { throw 'Tool root is empty.' }
+
+    $toolPathsPs1 = Join-Path $toolRoot 'BBReborneDIYTool.paths.ps1'
+    if (-not (Test-Path -LiteralPath $toolPathsPs1 -PathType Leaf)) {
+        throw "Tool paths file was not created: $toolPathsPs1"
+    }
+
+    $pwsh = Get-PwshForWorkflow
+
+    Refresh-NoirMapStepCheckboxAvailability
+    $stepSelection = Get-EffectiveNoirMapSteps -MapCode $MapCode
+    $enabledSteps = @($stepSelection.Enabled)
+    $skippedSteps = @($stepSelection.Skipped)
+
+    if ($enabledSteps.Count -eq 0) {
+        Write-UiLog "$MapCode Noir patches: no enabled steps after backend/input filtering."
+        return
+    }
+
+    foreach ($s in $skippedSteps) {
+        Write-UiLog "$MapCode Noir patches: skipping $($s.Id) $($s.Name): $($s.Reason)"
+    }
+
+    if (-not (Show-MapPatchFocusWarning -MapCode $MapCode -Steps $enabledSteps -SkippedSteps $skippedSteps)) {
+        Write-UiLog "$MapCode Noir patches: cancelled before launch."
+        return
+    }
+
+    $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
+    $mapLogRoot = Join-Path (Join-Path (Join-Path $TxtOutputRoot.Text.Trim() '_logs') 'noir_maps') $MapCode
+    $runDir = Join-Path $mapLogRoot $stamp
+    $runner = Join-Path $runDir ("run_noir_{0}.ps1" -f $MapCode)
+    $summaryPath = Join-Path $runDir 'map_run_summary.json'
+
+    New-MapRunnerScript -MapCode $MapCode -EnabledSteps $enabledSteps -SkippedSteps $skippedSteps -RunnerPath $runner -SummaryPath $summaryPath -ToolPathsPs1 $toolPathsPs1 -PwshExe $pwsh -UseNoirTextures
+
+    if ([bool](C 'ChkNoirNoUpscaleTextures').IsChecked) {
+        Write-UiLog "$MapCode Noir patches: texture step will use -NoUpscale."
+    }
+    if ($null -ne $TxtRealEsrganModelFile -and -not [string]::IsNullOrWhiteSpace($TxtRealEsrganModelFile.Text)) {
+        Write-UiLog "$MapCode Noir patches: texture step will use Real-ESRGAN model file: $($TxtRealEsrganModelFile.Text)"
+    }
+
+    Write-UiLog "$MapCode Noir patches: launching visible PowerShell process."
+    Write-UiLog "Runner: $runner"
+    Write-UiLog "Summary: $summaryPath"
+
+    if ($NoirMapRowControls.ContainsKey($MapCode)) {
+        $NoirMapRowControls[$MapCode].Status.Text = 'Running'
+        $NoirMapRowControls[$MapCode].Patch.IsEnabled = $false
+    }
+
+    $argList = [string[]]@(
+        '-NoProfile',
+        '-ExecutionPolicy', 'Bypass',
+        '-File', $runner
+    )
+    $argLine = Join-WindowsCommandLine -Arguments $argList
+
+    $startedAt = Get-Date
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    $proc = Start-Process -FilePath $pwsh -ArgumentList $argLine -WindowStyle Normal -PassThru
+
+    $timer = [System.Windows.Threading.DispatcherTimer]::new()
+    $timer.Interval = [TimeSpan]::FromSeconds(2)
+    $timer.Tag = [pscustomobject]@{
+        Process     = $proc
+        Stopwatch   = $sw
+        StartedAt   = $startedAt
+        MapCode     = $MapCode
+        SummaryPath = $summaryPath
+    }
+
+    $timer.Add_Tick({
+        param($sender, $eventArgs)
+
+        $state = $sender.Tag
+        $scopeCode = [string]$state.MapCode
+        $elapsedSeconds = [double]$state.Stopwatch.Elapsed.TotalSeconds
+
+        if ($NoirMapRowControls.ContainsKey($scopeCode)) {
+            $NoirMapRowControls[$scopeCode].Elapsed.Text = (Format-ElapsedSeconds -Seconds $elapsedSeconds)
+        }
+
+        if (-not $state.Process.HasExited) { return }
+
+        $sender.Stop()
+        $state.Stopwatch.Stop()
+
+        if ($NoirMapRowControls.ContainsKey($scopeCode)) {
+            $NoirMapRowControls[$scopeCode].Patch.IsEnabled = $true
+        }
+
+        $exitCode = $state.Process.ExitCode
+        Write-UiLog "$scopeCode Noir patches: PowerShell process exited with code $exitCode."
+
+        $summary = Read-MapRunSummary -SummaryPath $state.SummaryPath
+        if ($summary -and $summary.TotalElapsedSeconds) {
+            $elapsedSeconds = [double]$summary.TotalElapsedSeconds
+        }
+
+        if ($summary) {
+            Write-UiLog ("$scopeCode Noir completed scripts: {0} / {1}" -f $summary.CompletedSteps, $summary.TotalSteps)
+            if ($summary.FailedStepId) {
+                Write-UiLog ("$scopeCode Noir failed at step {0} {1}: {2}" -f $summary.FailedStepId, $summary.FailedStepName, $summary.FailedMessage)
+            }
+            if ($summary.TranscriptPath) {
+                Write-UiLog ("$scopeCode Noir transcript: {0}" -f $summary.TranscriptPath)
+            }
+        }
+
+        if ($summary -and $summary.Ok -eq $true) {
+            Set-NoirScopeElapsed -ScopeCode $scopeCode -Seconds $elapsedSeconds -Completed
+            if ($NoirMapRowControls.ContainsKey($scopeCode)) { $NoirMapRowControls[$scopeCode].Status.Text = 'Completed' }
+            Test-NoirGeneratedFilesForScope -Scope $scopeCode -MapCode $scopeCode | Out-Null
+            return
+        }
+
+        $NoirScopeElapsedSeconds[$scopeCode] = $elapsedSeconds
+        if ($NoirMapRowControls.ContainsKey($scopeCode)) {
+            $NoirMapRowControls[$scopeCode].Elapsed.Text = (Format-ElapsedSeconds -Seconds $elapsedSeconds)
+            if ($exitCode -eq 0) { $NoirMapRowControls[$scopeCode].Status.Text = 'Finished / check files' }
+            else { $NoirMapRowControls[$scopeCode].Status.Text = 'Failed' }
+        }
+        Update-NoirTotals
+    }.GetNewClosure())
+
+    $timer.Start()
+}
+
+function Start-VisibleAllNoirMapPatchProcess {
+    Ensure-ModOutputFolders
+    Save-PathFiles -Silent
+
+    $toolRoot = $TxtToolRoot.Text.Trim()
+    if ([string]::IsNullOrWhiteSpace($toolRoot)) { throw 'Tool root is empty.' }
+
+    $toolPathsPs1 = Join-Path $toolRoot 'BBReborneDIYTool.paths.ps1'
+    if (-not (Test-Path -LiteralPath $toolPathsPs1 -PathType Leaf)) {
+        throw "Tool paths file was not created: $toolPathsPs1"
+    }
+
+    $pwsh = Get-PwshForWorkflow
+    $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
+    $allLogRoot = Join-Path (Join-Path (Join-Path $TxtOutputRoot.Text.Trim() '_logs') 'noir_maps') 'ALL'
+    $runDir = Join-Path $allLogRoot $stamp
+    $masterRunner = Join-Path $runDir 'run_all_noir_maps.ps1'
+    $masterSummary = Join-Path $runDir 'all_map_run_summary.json'
+
+    Refresh-NoirMapStepCheckboxAvailability
+
+    $mapRuns = @()
+    foreach ($map in $Maps) {
+        $mapCode = [string]$map.Code
+        $stepSelection = Get-EffectiveNoirMapSteps -MapCode $mapCode
+        $enabledSteps = @($stepSelection.Enabled)
+        $skippedSteps = @($stepSelection.Skipped)
+        if ($enabledSteps.Count -eq 0) {
+            Write-UiLog "$mapCode Noir run-all: no enabled steps after backend/input filtering; skipping map."
+            continue
+        }
+
+        foreach ($s in $skippedSteps) {
+            Write-UiLog "$mapCode Noir run-all: skipping $($s.Id) $($s.Name): $($s.Reason)"
+        }
+
+        $mapRunDir = Join-Path $runDir $mapCode
+        $runner = Join-Path $mapRunDir ("run_noir_{0}.ps1" -f $mapCode)
+        $summaryPath = Join-Path $mapRunDir 'map_run_summary.json'
+        New-MapRunnerScript -MapCode $mapCode -EnabledSteps $enabledSteps -SkippedSteps $skippedSteps -RunnerPath $runner -SummaryPath $summaryPath -ToolPathsPs1 $toolPathsPs1 -PwshExe $pwsh -UseNoirTextures
+
+        $skippedStepIds = (@($skippedSteps | ForEach-Object { [string]$_.Id }) -join ',')
+        $skippedStepText = (@($skippedSteps | ForEach-Object { ("{0} {1}: {2}" -f $_.Id, $_.Name, $_.Reason) }) -join '; ')
+
+        $mapRuns += [pscustomobject]@{
+            MapCode = $mapCode
+            Runner = $runner
+            Summary = $summaryPath
+            EnabledStepCount = [int]$enabledSteps.Count
+            SkippedStepCount = [int]$skippedSteps.Count
+            SkippedStepIds = [string]$skippedStepIds
+            SkippedStepText = [string]$skippedStepText
+        }
+    }
+
+    if ($mapRuns.Count -eq 0) {
+        Write-UiLog 'Run all Noir patches: no enabled map runs.'
+        return
+    }
+
+    if (-not (Show-AllMapPatchFocusWarning -MapRuns $mapRuns)) {
+        Write-UiLog 'Run all Noir patches: cancelled before launch.'
+        return
+    }
+
+    New-AllMapRunnerScript -MapRuns $mapRuns -RunnerPath $masterRunner -SummaryPath $masterSummary -PwshExe $pwsh
+
+    if ([bool](C 'ChkNoirNoUpscaleTextures').IsChecked) {
+        Write-UiLog 'Run all Noir patches: texture steps will use -NoUpscale.'
+    }
+    if ($null -ne $TxtRealEsrganModelFile -and -not [string]::IsNullOrWhiteSpace($TxtRealEsrganModelFile.Text)) {
+        Write-UiLog "Run all Noir patches: texture steps will use Real-ESRGAN model file: $($TxtRealEsrganModelFile.Text)"
+    }
+
+    Write-UiLog 'Run all Noir patches: launching visible PowerShell process.'
+    Write-UiLog "Runner: $masterRunner"
+    Write-UiLog "Summary: $masterSummary"
+
+    foreach ($map in $Maps) {
+        $code = [string]$map.Code
+        if ($NoirMapRowControls.ContainsKey($code)) {
+            $NoirMapRowControls[$code].Status.Text = 'Queued'
+            $NoirMapRowControls[$code].Patch.IsEnabled = $false
+        }
+    }
+    $runAllButton = C 'BtnRunAllNoirMapPatches'
+    $runAllButton.IsEnabled = $false
+
+    $argList = [string[]]@(
+        '-NoProfile',
+        '-ExecutionPolicy', 'Bypass',
+        '-File', $masterRunner
+    )
+    $argLine = Join-WindowsCommandLine -Arguments $argList
+
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    $proc = Start-Process -FilePath $pwsh -ArgumentList $argLine -WindowStyle Normal -PassThru
+
+    $timer = [System.Windows.Threading.DispatcherTimer]::new()
+    $timer.Interval = [TimeSpan]::FromSeconds(5)
+    $timer.Tag = [pscustomobject]@{
+        Process = $proc
+        Stopwatch = $sw
+        MapRuns = $mapRuns
+        SummaryPath = $masterSummary
+    }
+
+    $timer.Add_Tick({
+        param($sender, $eventArgs)
+
+        $state = $sender.Tag
+        foreach ($run in @($state.MapRuns)) {
+            $scopeCode = [string]$run.MapCode
+            $summary = Read-MapRunSummary -SummaryPath ([string]$run.Summary)
+            if ($summary) {
+                $elapsedSeconds = [double]$summary.TotalElapsedSeconds
+                if ($summary.Ok -eq $true) {
+                    Set-NoirScopeElapsed -ScopeCode $scopeCode -Seconds $elapsedSeconds -Completed
+                    if ($NoirMapRowControls.ContainsKey($scopeCode)) { $NoirMapRowControls[$scopeCode].Status.Text = 'Completed' }
+                }
+                else {
+                    $NoirScopeElapsedSeconds[$scopeCode] = $elapsedSeconds
+                    if ($NoirMapRowControls.ContainsKey($scopeCode)) {
+                        $NoirMapRowControls[$scopeCode].Elapsed.Text = (Format-ElapsedSeconds -Seconds $elapsedSeconds)
+                        $NoirMapRowControls[$scopeCode].Status.Text = 'Failed'
+                    }
+                }
+            }
+            elseif ($NoirMapRowControls.ContainsKey($scopeCode)) {
+                if ($NoirMapRowControls[$scopeCode].Status.Text -eq 'Queued') { $NoirMapRowControls[$scopeCode].Status.Text = 'Pending' }
+            }
+        }
+
+        if (-not $state.Process.HasExited) { return }
+
+        $sender.Stop()
+        $state.Stopwatch.Stop()
+        $exitCode = $state.Process.ExitCode
+        Write-UiLog "Run all Noir patches: PowerShell process exited with code $exitCode."
+
+        foreach ($map in $Maps) {
+            $code = [string]$map.Code
+            if ($NoirMapRowControls.ContainsKey($code)) { $NoirMapRowControls[$code].Patch.IsEnabled = $true }
+        }
+        (C 'BtnRunAllNoirMapPatches').IsEnabled = $true
+
+        $summaryAll = Read-AllMapRunSummary -SummaryPath ([string]$state.SummaryPath)
+        if ($summaryAll) {
+            Write-UiLog ("Run all Noir patches completed maps: {0} / {1}" -f $summaryAll.CompletedMaps, $summaryAll.TotalMaps)
+            if ($summaryAll.FailedMapCode) {
+                Write-UiLog ("Run all Noir patches failed at map {0}: {1}" -f $summaryAll.FailedMapCode, $summaryAll.FailedMessage)
+            }
+            if ($summaryAll.TranscriptPath) { Write-UiLog ("Run all Noir patches transcript: {0}" -f $summaryAll.TranscriptPath) }
+        }
+
+        foreach ($run in @($state.MapRuns)) {
+            $scopeCode = [string]$run.MapCode
+            $summary = Read-MapRunSummary -SummaryPath ([string]$run.Summary)
+            if ($summary -and $summary.Ok -eq $true) {
+                Set-NoirScopeElapsed -ScopeCode $scopeCode -Seconds ([double]$summary.TotalElapsedSeconds) -Completed
+                Test-NoirGeneratedFilesForScope -Scope $scopeCode -MapCode $scopeCode | Out-Null
+            }
+            elseif ($NoirMapRowControls.ContainsKey($scopeCode) -and $NoirMapRowControls[$scopeCode].Status.Text -in @('Queued','Pending')) {
+                $NoirMapRowControls[$scopeCode].Status.Text = if ($exitCode -eq 0) { 'Not run' } else { 'Stopped' }
+            }
+        }
+        Update-NoirTotals
+    }.GetNewClosure())
+
+    $timer.Start()
+}
+
+function Invoke-NoirAllMapPatches {
+    Start-VisibleAllNoirMapPatchProcess
+}
+
+function Invoke-NoirMapPatchStub {
+    param([Parameter(Mandatory)][string]$MapCode)
+    Start-VisibleNoirMapPatchProcess -MapCode ([string]$MapCode)
+}
+
+function Build-NoirMapRows {
+    $NoirMapsGrid.Children.Clear()
+    $NoirMapsGrid.RowDefinitions.Clear()
+    $NoirMapsGrid.ColumnDefinitions.Clear()
+    $NoirMapRowControls.Clear()
+    $NoirMapStepCheckControls.Clear()
+    $NoirMapStepBulkCheckControls.Clear()
+    $NoirTotalsControls.Clear()
+
+    $widths = @('75', '210', '100', '100', '320', '120', '125', '185')
+    foreach ($w in $widths) {
+        $col = New-Object System.Windows.Controls.ColumnDefinition
+        $col.Width = [System.Windows.GridLengthConverter]::new().ConvertFromString($w)
+        [void]$NoirMapsGrid.ColumnDefinitions.Add($col)
+    }
+
+    $header = New-Object System.Windows.Controls.RowDefinition
+    $header.Height = [System.Windows.GridLength]::Auto
+    [void]$NoirMapsGrid.RowDefinitions.Add($header)
+
+    Add-NoirMapGridChild -Child (New-TextBlockCell -Text 'Section' -Bold) -Row 0 -Column 0
+    Add-NoirMapGridChild -Child (New-TextBlockCell -Text 'Name' -Bold) -Row 0 -Column 1
+    Add-NoirMapGridChild -Child (New-TextBlockCell -Text 'Estimate' -Bold) -Row 0 -Column 2
+    Add-NoirMapGridChild -Child (New-TextBlockCell -Text 'Elapsed' -Bold) -Row 0 -Column 3
+    Add-NoirMapGridChild -Child (New-TextBlockCell -Text 'Steps' -Bold) -Row 0 -Column 4
+    Add-NoirMapGridChild -Child (New-TextBlockCell -Text 'Patch' -Bold) -Row 0 -Column 5
+    Add-NoirMapGridChild -Child (New-TextBlockCell -Text 'Check files' -Bold) -Row 0 -Column 6
+    Add-NoirMapGridChild -Child (New-TextBlockCell -Text 'Status' -Bold) -Row 0 -Column 7
+
+    $rowIndex = 1
+    foreach ($map in $Maps) {
+        $rd = New-Object System.Windows.Controls.RowDefinition
+        $rd.Height = [System.Windows.GridLength]::Auto
+        [void]$NoirMapsGrid.RowDefinitions.Add($rd)
+
+        $codeText = New-TextBlockCell -Text $map.Code
+        $nameText = New-TextBlockCell -Text 'Hidden' -Tooltip 'Enable Show name spoilers to reveal map names.'
+        $estimateText = New-TextBlockCell -Text (Get-ScopeEstimateText -ScopeCode $map.Code)
+        $elapsedText = New-TextBlockCell -Text '--'
+        $statusText = New-TextBlockCell -Text 'Ready'
+        $stepsPanel = New-NoirStepCheckboxPanel -MapCode $map.Code
+        $patchButton = New-ButtonCell -Text 'Run Noir' -Width 96 -Tooltip 'Run selected Noir map steps for this map.'
+        $checkButton = New-ButtonCell -Text 'Check' -Width 95 -Tooltip 'Check generated Noir files for this map.'
+
+        $localMapCode = [string]$map.Code
+        $patchButton.Add_Click({
+            Invoke-SafeUiAction {
+                Invoke-NoirMapPatchStub -MapCode $localMapCode
+            }
+        }.GetNewClosure())
+
+        $checkButton.Add_Click({
+            Invoke-SafeUiAction {
+                $result = Test-NoirGeneratedFilesForScope -Scope $localMapCode -MapCode $localMapCode
+                if ($NoirMapRowControls.ContainsKey($localMapCode)) {
+                    $NoirMapRowControls[$localMapCode].Status.Text = $result
+                }
+            }
+        }.GetNewClosure())
+
+        Add-NoirMapGridChild -Child $codeText -Row $rowIndex -Column 0
+        Add-NoirMapGridChild -Child $nameText -Row $rowIndex -Column 1
+        Add-NoirMapGridChild -Child $estimateText -Row $rowIndex -Column 2
+        Add-NoirMapGridChild -Child $elapsedText -Row $rowIndex -Column 3
+        Add-NoirMapGridChild -Child $stepsPanel -Row $rowIndex -Column 4
+        Add-NoirMapGridChild -Child $patchButton -Row $rowIndex -Column 5
+        Add-NoirMapGridChild -Child $checkButton -Row $rowIndex -Column 6
+        Add-NoirMapGridChild -Child $statusText -Row $rowIndex -Column 7
+
+        $NoirMapRowControls[$map.Code] = [pscustomobject]@{
+            Name = $nameText
+            Estimate = $estimateText
+            Elapsed = $elapsedText
+            Status = $statusText
+            Patch = $patchButton
+            Check = $checkButton
+            StepChecks = $stepsPanel
+        }
+
+        $rowIndex++
+    }
+
+    $rdTotal = New-Object System.Windows.Controls.RowDefinition
+    $rdTotal.Height = [System.Windows.GridLength]::Auto
+    [void]$NoirMapsGrid.RowDefinitions.Add($rdTotal)
+
+    $totalCode = New-TextBlockCell -Text 'TOTAL' -Bold
+    $totalName = New-TextBlockCell -Text 'Noir maps' -Bold
+    $totalEstimate = New-TextBlockCell -Text (Format-ElapsedSeconds -Seconds (Get-ScaledReferenceTotalSeconds)) -Bold
+    $totalElapsed = New-TextBlockCell -Text '--' -Bold
+    $totalStepsPanel = New-NoirStepBulkCheckboxPanel
+    $totalStatus = New-TextBlockCell -Text '0 / 0 completed' -Bold
+
+    Add-NoirMapGridChild -Child $totalCode -Row $rowIndex -Column 0
+    Add-NoirMapGridChild -Child $totalName -Row $rowIndex -Column 1
+    Add-NoirMapGridChild -Child $totalEstimate -Row $rowIndex -Column 2
+    Add-NoirMapGridChild -Child $totalElapsed -Row $rowIndex -Column 3
+    Add-NoirMapGridChild -Child $totalStepsPanel -Row $rowIndex -Column 4
+    Add-NoirMapGridChild -Child $totalStatus -Row $rowIndex -Column 7
+
+    $NoirTotalsControls.Estimate = $totalEstimate
+    $NoirTotalsControls.Elapsed = $totalElapsed
+    $NoirTotalsControls.StepChecks = $totalStepsPanel
+    $NoirTotalsControls.Status = $totalStatus
+
+    Update-NoirMapNameVisibility
+    Refresh-NoirMapStepCheckboxAvailability
+    Update-NoirMapStepBulkCheckboxState
+    Update-NoirTotals
+}
+
+
+
 function Build-MapRows {
+    # Keep this in sync with Build-NoirMapRows so the Global line uses the same compact Steps column.
     $widths = @('75', '210', '100', '100', '320', '120', '125', '185')
     foreach ($w in $widths) {
         $col = New-Object System.Windows.Controls.ColumnDefinition
@@ -6441,7 +7402,7 @@ function Build-MapRows {
     Add-MapGridChild -Child (New-TextBlockCell -Text 'Name' -Bold) -Row 0 -Column 1
     Add-MapGridChild -Child (New-TextBlockCell -Text 'Estimate' -Bold) -Row 0 -Column 2
     Add-MapGridChild -Child (New-TextBlockCell -Text 'Elapsed' -Bold) -Row 0 -Column 3
-    Add-MapGridChild -Child (New-TextBlockCell -Text 'Steps 1-8' -Bold) -Row 0 -Column 4
+    Add-MapGridChild -Child (New-TextBlockCell -Text 'Steps' -Bold) -Row 0 -Column 4
     Add-MapGridChild -Child (New-TextBlockCell -Text 'Patch' -Bold) -Row 0 -Column 5
     Add-MapGridChild -Child (New-TextBlockCell -Text 'Check files' -Bold) -Row 0 -Column 6
     Add-MapGridChild -Child (New-TextBlockCell -Text 'Status' -Bold) -Row 0 -Column 7
@@ -6751,6 +7712,29 @@ function Build-ToolRows {
     }
 }
 
+
+(C 'BtnOpenNoirScriptsFolder').Add_Click({
+    Invoke-SafeUiAction {
+        $noirRoot = Join-Path (Join-Path $scriptRoot 'Scripts') 'Noir'
+        New-Item -ItemType Directory -Path $noirRoot -Force | Out-Null
+        Start-Process explorer.exe -ArgumentList "`"$noirRoot`""
+        Write-UiLog "Opened Noir scripts folder: $noirRoot"
+    }
+})
+
+
+(C 'ChkShowNoirMapNames').Add_Click({
+    Invoke-SafeUiAction {
+        Update-NoirMapNameVisibility
+    }
+})
+
+(C 'BtnRunAllNoirMapPatches').Add_Click({
+    Invoke-SafeUiAction {
+        Invoke-NoirAllMapPatches
+    }
+})
+
 (C 'ChkShowMapNames').Add_Click({
     Invoke-SafeUiAction {
         Update-MapNameVisibility
@@ -6947,6 +7931,7 @@ $ChkShowParamTweaksSpoilers.Add_Click({
 
 Build-ToolRows
 Build-MapRows
+Build-NoirMapRows
 
 Write-UiLog 'Ready.'
 Write-UiLog "Current host: $((Get-Process -Id $PID).Path)"

@@ -33,6 +33,7 @@
         04_Global_BBReborne_Gparam_GameParam.ps1
         05_Global_BBReborne_Obj_FromDiffs.ps1
         06_Global_BBReborne_Param_DefaultDrawparam.ps1
+        07_Global_BBReborne_Obj_Textures.ps1
 
     Expected config file from BBReborneDIYTool.ps1:
         <ToolRoot>\BBReborneDIYTool.paths.ps1
@@ -56,7 +57,8 @@ param(
 
     [switch]$NoUnblock,
     [switch]$KeepChildWork,
-    [switch]$ContinueOnError
+    [switch]$ContinueOnError,
+    [string[]]$OnlySteps = @()
 )
 
 Set-StrictMode -Version Latest
@@ -312,6 +314,32 @@ function Get-WitchyBnd21445RoamingSettingsJson {
     return ($settings | ConvertTo-Json -Depth 8)
 }
 
+
+function Get-WitchyBnd21445NonRecursiveRoamingSettingsJson {
+    $settings = [ordered]@{
+        Bnd                        = $false
+        Dcx                        = $false
+        ParamDefaultValueThreshold = 1
+        ParamCellStyle             = 0
+        Recursive                  = $false
+        EndDelay                   = 100
+        PauseOnError               = $false
+        Parallel                   = $true
+        Expert                     = $false
+        Offline                    = $true
+        TaeFolder                  = $false
+        DeferTools                 = [ordered]@{}
+        Flexible                   = $false
+        LastUpdateCheck            = '2026-01-15T20:01:33.8508924-03:00'
+        SkipUpdateVersion          = '3.0.0.0'
+        LastLaunchedVersion        = '2.14.4.5'
+        BackupMethod               = 1
+        GitBackup                  = $false
+    }
+
+    return ($settings | ConvertTo-Json -Depth 8)
+}
+
 function Get-WitchyBnd2401LocalSettingsJson {
     $settings = [ordered]@{
         Bnd                = $false
@@ -348,7 +376,7 @@ function Write-JsonNoBom {
 
 function Write-WitchySettingsForGlobalStep {
     param(
-        [Parameter(Mandatory)][ValidateSet('v3.0.0.1','v2.14.4.5','v2.4.0.1','None')][string]$Version,
+        [Parameter(Mandatory)][ValidateSet('v3.0.0.1','v2.14.4.5','v2.14.4.5-nonrecursive','v2.4.0.1','None')][string]$Version,
         [AllowNull()][string]$WitchyExe
     )
 
@@ -367,6 +395,13 @@ function Write-WitchySettingsForGlobalStep {
         $path = Get-WitchyRoamingSettingsPath
         Write-JsonNoBom -Path $path -Json (Get-WitchyBnd21445RoamingSettingsJson)
         Write-Info "WitchyBND settings prepared for v2.14.4.5: $path"
+        return
+    }
+
+    if ($Version -eq 'v2.14.4.5-nonrecursive') {
+        $path = Get-WitchyRoamingSettingsPath
+        Write-JsonNoBom -Path $path -Json (Get-WitchyBnd21445NonRecursiveRoamingSettingsJson)
+        Write-Info "WitchyBND settings prepared for v2.14.4.5 non-recursive OBJ/TPF workflow: $path"
         return
     }
 
@@ -542,6 +577,7 @@ Write-Info "ToolRoot    = $ToolRoot"
 Write-Info "CpuThrottle = $CpuThrottle"
 Write-Info "GpuThrottle = $GpuThrottle"
 Write-Info "RunLogDir   = $runLogDir"
+if ($OnlySteps -and $OnlySteps.Count -gt 0) { Write-Info ("OnlySteps   = {0}" -f ($OnlySteps -join ', ')) }
 
 if (-not $NoUnblock) {
     Write-Stage ''
@@ -584,8 +620,28 @@ $FlverJsonToolExeResolved = Resolve-ToolFileFromConfigOrSearch `
     -SearchRoot $ToolRoot `
     -FileName 'FlverJsonTool.exe'
 
+$TexconvExeResolved = Resolve-ToolFileFromConfigOrSearch `
+    -Label 'texconv.exe' `
+    -VariableNames @('BBR_TexconvExe','BBR_DirectXTexTexconvExe') `
+    -SearchRoot $ToolRoot `
+    -FileName 'texconv.exe'
+
+$RealEsrganExeResolved = Resolve-ToolFileFromConfigOrSearch `
+    -Label 'Real-ESRGAN executable' `
+    -VariableNames @('BBR_RealEsrganExe','BBR_RealESRGANExe') `
+    -SearchRoot $ToolRoot `
+    -FileName 'realesrgan-ncnn-vulkan.exe'
+
+$MagickExeResolved = Resolve-ToolFileFromConfigOrSearch `
+    -Label 'ImageMagick magick.exe' `
+    -VariableNames @('BBR_ImageMagickExe','BBR_MagickExe') `
+    -SearchRoot $ToolRoot `
+    -FileName 'magick.exe' `
+    -AllowPathCommand
+
 $steps = @(
     [pscustomobject]@{
+        Id = '01'
         Label = '01 SFX remove player light'
         Script = '01_Global_BBReborne_SFX_RemovePlayerLight.ps1'
         WitchySettings = 'v3.0.0.1'
@@ -593,6 +649,7 @@ $steps = @(
         ExtraArguments = @('-WitchyBndExe', $WitchyBnd3001)
     },
     [pscustomobject]@{
+        Id = '02'
         Label = '02 SFX M25 merge'
         Script = '02_Global_BBReborne_SFX_M25.ps1'
         WitchySettings = 'v2.14.4.5'
@@ -600,6 +657,7 @@ $steps = @(
         ExtraArguments = @('-WitchyBndExe', $WitchyBnd21445)
     },
     [pscustomobject]@{
+        Id = '03'
         Label = '03 Menu fe.gfx'
         Script = '03_Global_BBReborne_Menu_fe.ps1'
         WitchySettings = 'None'
@@ -607,6 +665,7 @@ $steps = @(
         ExtraArguments = @('-GitExe', $GitExeResolved)
     },
     [pscustomobject]@{
+        Id = '04'
         Label = '04 Gparam gameparam'
         Script = '04_Global_BBReborne_Gparam_GameParam.ps1'
         WitchySettings = 'v2.4.0.1'
@@ -614,6 +673,7 @@ $steps = @(
         ExtraArguments = @('-WitchyBndExe', $WitchyBnd2401, '-GitExe', $GitExeResolved)
     },
     [pscustomobject]@{
+        Id = '05'
         Label = '05 OBJ from diffs'
         Script = '05_Global_BBReborne_Obj_FromDiffs.ps1'
         WitchySettings = 'v2.14.4.5'
@@ -621,13 +681,52 @@ $steps = @(
         ExtraArguments = @('-WitchyBndExe', $WitchyBnd21445, '-FlverJsonToolExe', $FlverJsonToolExeResolved, '-GitExe', $GitExeResolved)
     },
     [pscustomobject]@{
+        Id = '06'
         Label = '06 Param drawparam default'
         Script = '06_Global_BBReborne_Param_DefaultDrawparam.ps1'
         WitchySettings = 'v2.14.4.5'
         WitchyExe = $WitchyBnd21445
         ExtraArguments = @('-WitchyBndExe', $WitchyBnd21445, '-GitExe', $GitExeResolved)
+    },
+    [pscustomobject]@{
+        Id = '07'
+        Label = '07 OBJ embedded textures'
+        Script = '07_Global_BBReborne_Obj_Textures.ps1'
+        WitchySettings = 'v2.14.4.5-nonrecursive'
+        WitchyExe = $WitchyBnd21445
+        ExtraArguments = @(
+            '-WitchyBndExe', $WitchyBnd21445,
+            '-WitchyBatchSize', '100',
+            '-WitchyLaunchMode', 'ShellDragDrop',
+            '-TexconvExe', $TexconvExeResolved,
+            '-RealEsrganExe', $RealEsrganExeResolved,
+            '-MagickExe', $MagickExeResolved,
+            '-PwshExe', $PwshExe
+        )
     }
 )
+
+
+if ($OnlySteps -and $OnlySteps.Count -gt 0) {
+    $selectedSet = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($rawStepId in $OnlySteps) {
+        if ([string]::IsNullOrWhiteSpace($rawStepId)) { continue }
+        $clean = ([string]$rawStepId).Trim()
+        if ($clean -match '^\d$') { $clean = ('0{0}' -f $clean) }
+        [void]$selectedSet.Add($clean)
+    }
+
+    $knownIds = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($step in $steps) { [void]$knownIds.Add([string]$step.Id) }
+
+    $unknown = @($selectedSet | Where-Object { -not $knownIds.Contains([string]$_) } | Sort-Object)
+    if ($unknown.Count -gt 0) {
+        throw ("Unknown Global step id(s): {0}. Valid ids: {1}" -f ($unknown -join ', '), (@($steps | ForEach-Object { $_.Id }) -join ', '))
+    }
+
+    $steps = @($steps | Where-Object { $selectedSet.Contains([string]$_.Id) })
+    if ($steps.Count -eq 0) { throw 'No Global steps selected.' }
+}
 
 $overall = [System.Diagnostics.Stopwatch]::StartNew()
 $results = [System.Collections.Generic.List[object]]::new()
@@ -679,6 +778,7 @@ $summary = [pscustomobject]@{
     GameRoot            = $GameRoot
     OutputRoot          = $OutputRoot
     RunLogDir           = $runLogDir
+    SelectedSteps        = @($steps | ForEach-Object { $_.Id })
     Results             = @($results)
 }
 
