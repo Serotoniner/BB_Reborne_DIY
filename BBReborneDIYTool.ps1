@@ -4198,6 +4198,7 @@ $Tools = @(
                         </TextBlock>
                     </Border>
 
+
                     <GroupBox Grid.Row="1" Header="Noir file generation" Margin="0,12,0,10" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}">
                         <Grid Margin="10">
                             <Grid.RowDefinitions>
@@ -4207,7 +4208,7 @@ $Tools = @(
                             </Grid.RowDefinitions>
 
                             <TextBlock Grid.Row="0" TextWrapping="Wrap" Margin="4,0,4,10">
-                                Noir scripts are intentionally separate from the main BB Reborne scripts. Future Noir map steps can be added under Scripts\Noir\Mapfiles. For now, Step 8 Textures is available and writes to BBReborne_noir_textures.
+                                Noir scripts are intentionally separate from the main BB Reborne scripts. The GLOBAL row exposes Step 5 OBJ from diffs and Step 7 Noir OBJ embedded textures. Map rows currently expose Step 8 Textures and write to BBReborne_noir_textures.
                             </TextBlock>
 
                             <DockPanel Grid.Row="1" LastChildFill="False" Margin="4,0,4,10">
@@ -6876,6 +6877,10 @@ function Update-NoirMapNameVisibility {
         if ($showNames) { $NoirMapRowControls[$map.Code].Name.Text = $map.Name }
         else { $NoirMapRowControls[$map.Code].Name.Text = 'Hidden' }
     }
+
+    if ($NoirMapRowControls.ContainsKey('GLOBAL')) {
+        $NoirMapRowControls['GLOBAL'].Name.Text = 'Noir OBJ embedded textures'
+    }
 }
 
 function Update-NoirEstimateDisplay {
@@ -6893,7 +6898,7 @@ function Update-NoirEstimateDisplay {
 function Update-NoirTotals {
     if (-not $NoirTotalsControls.ContainsKey('Status')) { return }
 
-    $totalTargets = $Maps.Count
+    $totalTargets = $Maps.Count + 1
     $completedCount = @($NoirScopeCompleted.GetEnumerator() | Where-Object { $_.Value -eq $true }).Count
     $elapsedTotal = 0.0
 
@@ -7263,6 +7268,167 @@ function Start-VisibleAllNoirMapPatchProcess {
     $timer.Start()
 }
 
+
+function Get-SelectedNoirGlobalStepIds {
+    $globalCode = 'GLOBAL'
+    if (-not $NoirMapStepCheckControls.ContainsKey($globalCode)) { return @() }
+
+    $selected = @()
+    foreach ($stepId in @('05','07')) {
+        if (-not $NoirMapStepCheckControls[$globalCode].ContainsKey($stepId)) { continue }
+        $cb = $NoirMapStepCheckControls[$globalCode][$stepId]
+        if ($cb.IsEnabled -eq $true -and $cb.IsChecked -eq $true) {
+            $selected += $stepId
+        }
+    }
+
+    return @($selected)
+}
+
+function Test-NoirGlobalGeneratedFiles {
+    Ensure-ModOutputFolders
+
+    $outputRoot = $TxtOutputRoot.Text.Trim()
+    if ([string]::IsNullOrWhiteSpace($outputRoot)) {
+        Write-UiLog 'Noir GLOBAL check: output root is empty.'
+        return 'Missing'
+    }
+
+    $noirObjRoot = Join-Path $outputRoot 'BBReborne_noir_obj'
+
+    $noirObjFiles = @()
+    if (Test-Path -LiteralPath $noirObjRoot -PathType Container) {
+        $noirObjFiles = @(Get-ChildItem -LiteralPath $noirObjRoot -Recurse -File -Filter '*.objbnd.dcx' -ErrorAction SilentlyContinue)
+    }
+
+    Write-UiLog "Noir GLOBAL check: BBReborne_noir_obj binders found: $($noirObjFiles.Count)"
+
+    if ($noirObjFiles.Count -eq 0) {
+        return 'Missing'
+    }
+
+    return ("Generated (NoirOBJ={0})" -f $noirObjFiles.Count)
+}
+
+function Start-VisibleNoirGlobalPatchProcess {
+    Ensure-ModOutputFolders
+    Save-PathFiles -Silent
+
+    $globalCode = 'GLOBAL'
+    $selectedSteps = @(Get-SelectedNoirGlobalStepIds)
+
+    if ($selectedSteps.Count -eq 0) {
+        Write-UiLog 'Noir GLOBAL: no global steps are selected; nothing to run.'
+        if ($NoirMapRowControls.ContainsKey($globalCode)) {
+            $NoirMapRowControls[$globalCode].Status.Text = 'Unchecked'
+        }
+        return
+    }
+
+    $toolRoot = $TxtToolRoot.Text.Trim()
+    if ([string]::IsNullOrWhiteSpace($toolRoot)) {
+        throw 'Tool root is empty.'
+    }
+
+    $toolPathsPs1 = Join-Path $toolRoot 'BBReborneDIYTool.paths.ps1'
+    if (-not (Test-Path -LiteralPath $toolPathsPs1 -PathType Leaf)) {
+        throw "Tool paths file was not created: $toolPathsPs1"
+    }
+
+    $runner = Join-Path $scriptRoot 'Scripts\Noir\Global\00_Run_Global_BBReborne_All.ps1'
+    if (-not (Test-Path -LiteralPath $runner -PathType Leaf)) {
+        throw "Noir GLOBAL runner script not found: $runner"
+    }
+
+    $pwsh = Get-PwshForWorkflow
+
+    $argList = @(
+        '-NoProfile',
+        '-ExecutionPolicy', 'Bypass',
+        '-File', $runner,
+        '-ToolPathsPs1', $toolPathsPs1,
+        '-GameRoot', $TxtGameRoot.Text.Trim(),
+        '-OutputRoot', $TxtOutputRoot.Text.Trim(),
+        '-CpuThrottle', $TxtCpuThrottle.Text.Trim(),
+        '-GpuThrottle', $TxtGpuThrottle.Text.Trim(),
+        '-PwshExe', $pwsh,
+        '-OnlySteps', ($selectedSteps -join ',')
+    )
+
+    $argLine = Join-WindowsCommandLine -Arguments $argList
+
+    Write-UiLog ("Noir GLOBAL: launching selected step(s): {0}" -f ($selectedSteps -join ', '))
+    Write-UiLog ("Noir GLOBAL: passing -OnlySteps as: {0}" -f ($selectedSteps -join ','))
+    Write-UiLog 'This uses Scripts\Noir\Global. Step 5 and Step 7 write to BBReborne_noir_obj.'
+    Write-UiLog "Runner: $runner"
+
+    if ($NoirMapRowControls.ContainsKey($globalCode)) {
+        $NoirMapRowControls[$globalCode].Status.Text = 'Running'
+        $NoirMapRowControls[$globalCode].Elapsed.Text = '00:00'
+        $NoirMapRowControls[$globalCode].Patch.IsEnabled = $false
+    }
+
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+
+    $proc = Start-Process `
+        -FilePath $pwsh `
+        -ArgumentList $argLine `
+        -WindowStyle Normal `
+        -PassThru
+
+    $timer = [System.Windows.Threading.DispatcherTimer]::new()
+    $timer.Interval = [TimeSpan]::FromSeconds(2)
+    $timer.Tag = [pscustomobject]@{
+        Process = $proc
+        Stopwatch = $sw
+        ScopeCode = $globalCode
+        SelectedSteps = $selectedSteps
+    }
+
+    $timer.Add_Tick({
+        param($sender, $eventArgs)
+
+        $state = $sender.Tag
+        $scopeCode = [string]$state.ScopeCode
+        $elapsedSeconds = [double]$state.Stopwatch.Elapsed.TotalSeconds
+
+        if ($NoirMapRowControls.ContainsKey($scopeCode)) {
+            $NoirMapRowControls[$scopeCode].Elapsed.Text = (Format-ElapsedSeconds -Seconds $elapsedSeconds)
+        }
+
+        if (-not $state.Process.HasExited) { return }
+
+        $sender.Stop()
+        $state.Stopwatch.Stop()
+
+        if ($NoirMapRowControls.ContainsKey($scopeCode)) {
+            $NoirMapRowControls[$scopeCode].Patch.IsEnabled = $true
+        }
+
+        $exitCode = $state.Process.ExitCode
+        Write-UiLog "Noir GLOBAL: PowerShell process exited with code $exitCode."
+
+        $elapsedSeconds = [double]$state.Stopwatch.Elapsed.TotalSeconds
+        $NoirScopeElapsedSeconds[$scopeCode] = $elapsedSeconds
+
+        if ($exitCode -eq 0) {
+            $NoirScopeCompleted[$scopeCode] = $true
+            if ($NoirMapRowControls.ContainsKey($scopeCode)) {
+                $NoirMapRowControls[$scopeCode].Status.Text = Test-NoirGlobalGeneratedFiles
+            }
+        } else {
+            if ($NoirMapRowControls.ContainsKey($scopeCode)) {
+                $NoirMapRowControls[$scopeCode].Status.Text = 'Failed'
+            }
+        }
+
+        Update-NoirTotals
+    }.GetNewClosure())
+
+    $timer.Start()
+}
+
+
 function Invoke-NoirAllMapPatches {
     Start-VisibleAllNoirMapPatchProcess
 }
@@ -7302,6 +7468,90 @@ function Build-NoirMapRows {
     Add-NoirMapGridChild -Child (New-TextBlockCell -Text 'Status' -Bold) -Row 0 -Column 7
 
     $rowIndex = 1
+
+    # GLOBAL row: only Noir Global Step 7 is exposed here.
+    $rdGlobal = New-Object System.Windows.Controls.RowDefinition
+    $rdGlobal.Height = [System.Windows.GridLength]::Auto
+    [void]$NoirMapsGrid.RowDefinitions.Add($rdGlobal)
+
+    $globalCode = 'GLOBAL'
+    $globalCodeText = New-TextBlockCell -Text $globalCode
+    $globalNameText = New-TextBlockCell -Text 'Noir OBJ compatibility + textures'
+    $globalEstimateText = New-TextBlockCell -Text (Get-ScopeEstimateText -ScopeCode 'GLOBAL')
+    $globalElapsedText = New-TextBlockCell -Text '--'
+    $globalStatusText = New-TextBlockCell -Text 'Ready'
+
+    $globalStepsPanel = New-Object System.Windows.Controls.StackPanel
+    $globalStepsPanel.Orientation = [System.Windows.Controls.Orientation]::Horizontal
+    $globalStepsPanel.Margin = [System.Windows.Thickness]::new(2)
+    $globalStepsPanel.VerticalAlignment = 'Center'
+    $globalStepsPanel.MinWidth = 160
+
+    $globalStepChecks = @{}
+
+    foreach ($globalStep in @(
+        [pscustomobject]@{ Id = '05'; Label = '5'; Tip = '05 OBJ from diffs compatibility output' },
+        [pscustomobject]@{ Id = '07'; Label = '7'; Tip = '07 Noir OBJ embedded textures' }
+    )) {
+        $cb = New-Object System.Windows.Controls.CheckBox
+        $cb.Content = [string]$globalStep.Label
+        $cb.Margin = [System.Windows.Thickness]::new(6,0,6,0)
+        $cb.MinWidth = 28
+        $cb.VerticalAlignment = 'Center'
+        $cb.IsChecked = $true
+        $cb.Tag = [string]$globalStep.Id
+        $cb.ToolTip = [string]$globalStep.Tip
+        $cb.Add_Click({
+            if (-not $script:IsUpdatingNoirMapStepBulkChecks) {
+                Update-NoirMapStepBulkCheckboxState
+            }
+        }.GetNewClosure())
+
+        [void]$globalStepsPanel.Children.Add($cb)
+        $globalStepChecks[[string]$globalStep.Id] = $cb
+    }
+
+    $NoirMapStepCheckControls[$globalCode] = $globalStepChecks
+
+    $globalPatchButton = New-ButtonCell -Text 'Run Noir' -Width 96 -Tooltip 'Run selected Noir global steps. Step 5 and Step 7 are available.'
+    $globalCheckButton = New-ButtonCell -Text 'Check' -Width 95 -Tooltip 'Check generated OBJ compatibility and Noir OBJ files.'
+
+    $globalPatchButton.Add_Click({
+        Invoke-SafeUiAction {
+            Start-VisibleNoirGlobalPatchProcess
+        }
+    }.GetNewClosure())
+
+    $globalCheckButton.Add_Click({
+        Invoke-SafeUiAction {
+            $result = Test-NoirGlobalGeneratedFiles
+            if ($NoirMapRowControls.ContainsKey('GLOBAL')) {
+                $NoirMapRowControls['GLOBAL'].Status.Text = $result
+            }
+        }
+    }.GetNewClosure())
+
+    Add-NoirMapGridChild -Child $globalCodeText -Row $rowIndex -Column 0
+    Add-NoirMapGridChild -Child $globalNameText -Row $rowIndex -Column 1
+    Add-NoirMapGridChild -Child $globalEstimateText -Row $rowIndex -Column 2
+    Add-NoirMapGridChild -Child $globalElapsedText -Row $rowIndex -Column 3
+    Add-NoirMapGridChild -Child $globalStepsPanel -Row $rowIndex -Column 4
+    Add-NoirMapGridChild -Child $globalPatchButton -Row $rowIndex -Column 5
+    Add-NoirMapGridChild -Child $globalCheckButton -Row $rowIndex -Column 6
+    Add-NoirMapGridChild -Child $globalStatusText -Row $rowIndex -Column 7
+
+    $NoirMapRowControls[$globalCode] = [pscustomobject]@{
+        Name = $globalNameText
+        Estimate = $globalEstimateText
+        Elapsed = $globalElapsedText
+        Status = $globalStatusText
+        Patch = $globalPatchButton
+        Check = $globalCheckButton
+        StepChecks = $globalStepsPanel
+    }
+
+    $rowIndex++
+
     foreach ($map in $Maps) {
         $rd = New-Object System.Windows.Controls.RowDefinition
         $rd.Height = [System.Windows.GridLength]::Auto
@@ -7359,11 +7609,11 @@ function Build-NoirMapRows {
     [void]$NoirMapsGrid.RowDefinitions.Add($rdTotal)
 
     $totalCode = New-TextBlockCell -Text 'TOTAL' -Bold
-    $totalName = New-TextBlockCell -Text 'Noir maps' -Bold
+    $totalName = New-TextBlockCell -Text 'Noir global + maps' -Bold
     $totalEstimate = New-TextBlockCell -Text (Format-ElapsedSeconds -Seconds (Get-ScaledReferenceTotalSeconds)) -Bold
     $totalElapsed = New-TextBlockCell -Text '--' -Bold
     $totalStepsPanel = New-NoirStepBulkCheckboxPanel
-    $totalStatus = New-TextBlockCell -Text '0 / 0 completed' -Bold
+    $totalStatus = New-TextBlockCell -Text '0 / 15 completed' -Bold
 
     Add-NoirMapGridChild -Child $totalCode -Row $rowIndex -Column 0
     Add-NoirMapGridChild -Child $totalName -Row $rowIndex -Column 1
@@ -7721,6 +7971,7 @@ function Build-ToolRows {
         Write-UiLog "Opened Noir scripts folder: $noirRoot"
     }
 })
+
 
 
 (C 'ChkShowNoirMapNames').Add_Click({
