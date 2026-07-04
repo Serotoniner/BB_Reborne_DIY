@@ -1128,6 +1128,7 @@ Write-Info "GameRoot       = $GameRoot"
 Write-Info "OutputRoot     = $OutputRoot"
 Write-Info "SourceObjRoot  = $SourceObjRoot"
 Write-Info "OutputObjRoot  = $objOutputRoot"
+Write-Info ("NoUpscale      = {0}" -f ([bool]$NoUpscale))
 Write-Info "Overlay source = existing files in OutputObjRoot are used only for object IDs with OBJ diffs"
 Write-Info "PatchDir       = $PatchDir"
 Write-Info ("Diff-backed overlay IDs = {0}" -f $diffBackedOverlayIds.Count)
@@ -1295,7 +1296,10 @@ try {
     # hiding generated DDS files before this script can map them back to the object TPFs.
     $textureScriptExtraArgs = @('-Keep', '-ForceRebuild')
     $noUpscaleArgs = @()
-    if ($NoUpscale) { $noUpscaleArgs += '-NoUpscale' }
+    if ($NoUpscale) {
+        $noUpscaleArgs += '-NoUpscale'
+        Write-Info '  NoUpscale active: diffuse and data texture passes will keep treatments but target 1x outputs.'
+    }
 
     $commonArgs = @(
         '-RootDir', $stageRoot,

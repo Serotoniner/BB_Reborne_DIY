@@ -63,7 +63,8 @@ param(
     [switch]$NoUnblock,
     [switch]$KeepChildWork,
     [switch]$ContinueOnError,
-    [string[]]$OnlySteps = @()
+    [string[]]$OnlySteps = @(),
+    [switch]$NoUpscale
 )
 
 Set-StrictMode -Version Latest
@@ -663,6 +664,7 @@ Write-Info "ToolPaths   = $configPath"
 Write-Info "PwshExe     = $PwshExe"
 Write-Info "ScriptsRoot = $ScriptsRoot"
 Write-Info "DiffsRoot   = $DiffsRoot"
+Write-Info ("NoUpscale   = {0}" -f ([bool]$NoUpscale))
 Write-Info "ToolRoot    = $ToolRoot"
 Write-Info "CpuThrottle = $CpuThrottle"
 Write-Info "GpuThrottle = $GpuThrottle"
@@ -797,6 +799,15 @@ $steps = @(
     }
 )
 
+
+if ($NoUpscale) {
+    foreach ($step in $steps) {
+        if ([string]$step.Id -eq '07') {
+            $step.ExtraArguments = @($step.ExtraArguments) + '-NoUpscale'
+        }
+    }
+    Write-Info 'NoUpscale active: Noir Global Step 07 will pass -NoUpscale to the OBJ embedded texture script.'
+}
 
 if ($OnlySteps -and $OnlySteps.Count -gt 0) {
     $selectedSet = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)

@@ -1138,6 +1138,7 @@ Write-Info "GameRoot       = $GameRoot"
 Write-Info "OutputRoot     = $OutputRoot"
 Write-Info "SourceObjRoot  = $SourceObjRoot"
 Write-Info "OutputObjRoot  = $objOutputRoot"
+Write-Info ("NoUpscale      = {0}" -f ([bool]$NoUpscale))
 Write-Info "NoirObjOverlay = $noirObjOverlayRoot"
 Write-Info "Noir          = $Noir"
 Write-Info "Overlay source = existing files in NoirObjOverlay are used only for object IDs with OBJ diffs"
@@ -1307,7 +1308,10 @@ try {
     # hiding generated DDS files before this script can map them back to the object TPFs.
     $textureScriptExtraArgs = @('-Keep', '-ForceRebuild')
     $noUpscaleArgs = @()
-    if ($NoUpscale) { $noUpscaleArgs += '-NoUpscale' }
+    if ($NoUpscale) {
+        $noUpscaleArgs += '-NoUpscale'
+        Write-Info '  NoUpscale active: diffuse and data texture passes will keep treatments but target 1x outputs.'
+    }
     $noirArgs = @()
     if ($Noir) { $noirArgs += '-Noir' }
 

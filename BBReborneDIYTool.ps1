@@ -59,6 +59,7 @@
       - Shows map/time rows with spoiler-safe raw codes or friendly labels.
       - Provides nested editable columns for Exposure, Gamma, ColorS, MiddleGray, and LutSourceId.
       - Each nested param column shows User, Modded, and Vanilla values, with header buttons for User/Modded/Vanilla mass-copy actions.
+      - Provides a Light selector for Vanilla, Mod, or Noir DiffColor/SpecColor/Hemi color values applied directly to extracted XML during the Param patch/repack stage.
       - Generates a full custom copy of the gparam patch diffs under Output\BBReborne_param_custom\_work, changing only editable +value lines from the User boxes.
       - Can run the map Param patch step against that custom diff copy, writing patched files under Output\BBReborne_param_custom.
       - Saves and reloads the last User values from Tools\BBReborneDIYTool.param_tweaks.user_values.json.
@@ -2026,8 +2027,17 @@ function Start-VisibleGlobalPatchProcess {
         if (-not $runnerSupportsOnlySteps) {
             throw "The Global runner does not support per-step checkboxes yet. Copy the updated 00_Run_Global_BBReborne_All.ps1 into Scripts\Global, then try again. Runner: $runner"
         }
-        $argList += @('-OnlySteps')
-        foreach ($stepId in $selectedGlobalSteps) { $argList += $stepId }
+
+        # Match the Noir Global launcher: pass the selected step list as one
+        # comma-separated value. Passing 05 and 07 as separate positional
+        # arguments can make PowerShell bind only the first item to -OnlySteps
+        # and treat the second one as an unexpected extra argument.
+        $argList += @('-OnlySteps', ($selectedGlobalSteps -join ','))
+    }
+
+    $globalNoUpscaleTextures = ([bool]$ChkNoUpscaleTextures.IsChecked)
+    if ($globalNoUpscaleTextures) {
+        $argList += '-NoUpscale'
     }
 
     $argLine = Join-WindowsCommandLine -Arguments $argList
@@ -2036,6 +2046,7 @@ function Start-VisibleGlobalPatchProcess {
     Write-UiLog ("Selected Global steps: {0}" -f ($selectedGlobalSteps -join ', '))
     if ($isFullGlobalSelection) { Write-UiLog 'Global runner: all steps selected; launching without -OnlySteps for compatibility.' }
     elseif ($runnerSupportsOnlySteps) { Write-UiLog 'Global runner: using -OnlySteps for the selected Global checkboxes.' }
+    if ($globalNoUpscaleTextures) { Write-UiLog 'GLOBAL patches: OBJ embedded texture step will use -NoUpscale.' }
     Write-UiLog 'A separate PowerShell window will close automatically when the global scripts finish.'
     Write-UiLog 'Do not click other windows while WitchyBND is waiting for its menu input.'
     Write-UiLog "Runner: $runner"
@@ -4167,15 +4178,34 @@ $Tools = @(
                         Edit Yebis values exposed by the gparam patch files. Generate patches writes a modified copy under the selected output folder, leaving the original Diffs folder untouched.
                     </TextBlock>
 
-                    <DockPanel Grid.Row="1" LastChildFill="False" Margin="4,0,4,10">
-                        <TextBlock DockPanel.Dock="Left" Name="TxtParamTweaksStatus" Text="Param tweak rows not loaded yet." VerticalAlignment="Center"/>
-                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                            <Button Name="BtnRefreshParamTweaks" Content="1 - Reload Values" Width="135" Height="28" Margin="12,0,0,0" ToolTip="Reload Yebis tweak rows from the current patch files under Diffs and recover the last saved User values."/>
+                    <Grid Grid.Row="1" Margin="4,0,4,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0" MinWidth="0" Margin="0,0,12,0" ClipToBounds="True">
+                            <TextBlock Name="TxtParamTweaksStatus"
+                                       Text="Param tweak rows not loaded yet."
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"
+                                       TextWrapping="NoWrap"
+                                       ToolTip="Param tweak rows not loaded yet."/>
+                        </Border>
+
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                            <TextBlock Text="Light:" VerticalAlignment="Center" Margin="12,0,4,0"/>
+                            <ComboBox Name="CmbParamTweaksLightLayer" Width="82" Height="28" Margin="0,0,4,0" SelectedIndex="1" ToolTip="Choose the independent light-color source applied after XML patches: Vanilla restores original light colors, Mod keeps the main Diffs light colors, Noir uses Diffs_noir light colors. Non-light Main/custom edits still apply.">
+                                <ComboBoxItem Content="Vanilla"/>
+                                <ComboBoxItem Content="Mod"/>
+                                <ComboBoxItem Content="Noir"/>
+                            </ComboBox>
+                            <Button Name="BtnRefreshParamTweaks" Content="1 - Reload Values" Width="135" Height="28" Margin="8,0,0,0" ToolTip="Reload Yebis tweak rows from the current patch files under Diffs and recover the last saved User values."/>
                             <Button Name="BtnGenerateParamTweaksPatches" Content="2 - Generate Patches" Width="150" Height="28" Margin="8,0,0,0" ToolTip="Save User values and generate a modified copy of the gparam patch files under Output\BBReborne_param_custom\_work."/>
                             <Button Name="BtnPatchParamTweaksFiles" Content="3 - Patch Params" Width="130" Height="28" Margin="8,0,0,0" ToolTip="Run the map Param patch step using the custom patch copy under Output\BBReborne_param_custom\_work."/>
                             <CheckBox Name="ChkShowParamTweaksSpoilers" Content="Show name spoilers" Margin="12,4,0,0" Foreground="{StaticResource TextBrush}" ToolTip="Display friendly map/time names instead of raw codes."/>
                         </StackPanel>
-                    </DockPanel>
+                    </Grid>
 
                     <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                         <Grid Name="ParamTweaksGrid" Margin="4"/>
@@ -4270,6 +4300,7 @@ $MapsGrid = C 'MapsGrid'
 $ChkNoUpscaleTextures = C 'ChkNoUpscaleTextures'
 $ParamTweaksGrid = C 'ParamTweaksGrid'
 $TxtParamTweaksStatus = C 'TxtParamTweaksStatus'
+$CmbParamTweaksLightLayer = C 'CmbParamTweaksLightLayer'
 $ChkShowParamTweaksSpoilers = C 'ChkShowParamTweaksSpoilers'
 
 $TxtOutputRoot.Text = $defaultOutputRoot
@@ -5779,7 +5810,7 @@ function Get-YebisValuesFromPatch {
     $currentKey = $null
     $currentIds = New-Object System.Collections.Generic.List[string]
 
-    foreach ($line in [System.IO.File]::ReadLines($PatchPath)) {
+    foreach ($line in [System.IO.File]::ReadAllLines($PatchPath)) {
         $content = $line
         if ($content.Length -gt 0 -and $content[0] -in @(' ', '-', '+')) {
             $content = $content.Substring(1)
@@ -6157,6 +6188,645 @@ function Set-YebisPatchPlusValues {
     )
 }
 
+
+function Get-ParamTweaksLightLayer {
+    if ($null -eq $CmbParamTweaksLightLayer) { return 'Mod' }
+
+    $selected = $CmbParamTweaksLightLayer.SelectedItem
+    if ($selected -and $selected.PSObject.Properties['Content']) {
+        $value = [string]$selected.Content
+        if ($value -in @('Vanilla','Mod','Noir')) { return $value }
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace([string]$CmbParamTweaksLightLayer.Text)) {
+        $value = [string]$CmbParamTweaksLightLayer.Text
+        if ($value -in @('Vanilla','Mod','Noir')) { return $value }
+    }
+
+    return 'Mod'
+}
+
+function Get-NoirDiffRoot {
+    return (Join-Path $scriptRoot 'Diffs_noir')
+}
+
+function Get-ParamTweaksNoirSourceRoot {
+    $noirRoot = Get-NoirDiffRoot
+    $drawparamRoot = Join-Path (Join-Path $noirRoot 'param') 'drawparam'
+    $paramRoot = Join-Path $noirRoot 'param'
+
+    if (Test-Path -LiteralPath $drawparamRoot -PathType Container) {
+        return ([System.IO.Path]::GetFullPath($drawparamRoot))
+    }
+
+    if (Test-Path -LiteralPath $paramRoot -PathType Container) {
+        return ([System.IO.Path]::GetFullPath($paramRoot))
+    }
+
+    return ([System.IO.Path]::GetFullPath($noirRoot))
+}
+
+function Test-ParamTweaksLightColorParam {
+    param(
+        [string]$Name1,
+        [string]$Name2
+    )
+
+    if ($Name2 -in @('DiffColor','SpecColor')) { return $true }
+    if ($Name1 -match '(?i)Hemi\s+Color\s+(Up|Down)') { return $true }
+    if ($Name2 -match '(?i)Hemi\s+Color\s+(Up|Down)') { return $true }
+    return $false
+}
+
+function New-ParamTweaksPatchValueKey {
+    param(
+        [string]$Name1,
+        [string]$Name2,
+        [string]$Id
+    )
+
+    return (([string]$Name1) + ([char]31) + ([string]$Name2) + ([char]31) + ([string]$Id))
+}
+
+function Get-ParamTweaksPatchLineContent {
+    param([Parameter(Mandatory)][string]$Line)
+
+    if ($Line.Length -gt 0 -and $Line[0] -in @(' ', '-', '+')) {
+        return $Line.Substring(1)
+    }
+
+    return $Line
+}
+
+function Get-ParamTweaksValueLineInfo {
+    param([Parameter(Mandatory)][string]$Line)
+
+    if ($Line -match '^([ +-].*?<value\s+id=")([^"]+)(">\s*)(.*?)(\s*</value>.*)$') {
+        return [pscustomobject]@{
+            Prefix = [string]$Matches[1]
+            Id     = [string]$Matches[2]
+            Mid    = [string]$Matches[3]
+            Value  = [string]$Matches[4]
+            Suffix = [string]$Matches[5]
+        }
+    }
+
+    return $null
+}
+
+function Set-ParamTweaksValueLineValue {
+    param(
+        [Parameter(Mandatory)][string]$Line,
+        [Parameter(Mandatory)][string]$Value
+    )
+
+    $info = Get-ParamTweaksValueLineInfo -Line $Line
+    if ($null -eq $info) { return $Line }
+    return ($info.Prefix + $info.Id + $info.Mid + [string]$Value + $info.Suffix)
+}
+
+function Get-ParamTweaksPatchValueChangeMap {
+    param(
+        [Parameter(Mandatory)][string]$PatchPath,
+        [switch]$LightOnly
+    )
+
+    $result = @{}
+    if (-not (Test-Path -LiteralPath $PatchPath -PathType Leaf)) { return $result }
+
+    $activeName1 = ''
+    $activeName2 = ''
+    $activeLight = $false
+    $pendingOriginalByKey = @{}
+
+    foreach ($line in [System.IO.File]::ReadAllLines($PatchPath)) {
+        $content = Get-ParamTweaksPatchLineContent -Line $line
+
+        if ($content -match '<param\b[^>]*name1="([^"]+)"[^>]*name2="([^"]+)"') {
+            $activeName1 = [string]$Matches[1]
+            $activeName2 = [string]$Matches[2]
+            $activeLight = Test-ParamTweaksLightColorParam -Name1 $activeName1 -Name2 $activeName2
+            $pendingOriginalByKey.Clear()
+        }
+
+        $useParam = (-not $LightOnly) -or $activeLight
+
+        if ($useParam -and $line -match '^-[^-].*<value\s+id="([^"]+)">\s*(.*?)\s*</value>') {
+            $id = [string]$Matches[1]
+            $value = [string]$Matches[2]
+            $key = New-ParamTweaksPatchValueKey -Name1 $activeName1 -Name2 $activeName2 -Id $id
+            $pendingOriginalByKey[$key] = $value
+        }
+        elseif ($useParam -and $line -match '^\+[^+].*<value\s+id="([^"]+)">\s*(.*?)\s*</value>') {
+            $id = [string]$Matches[1]
+            $value = [string]$Matches[2]
+            $key = New-ParamTweaksPatchValueKey -Name1 $activeName1 -Name2 $activeName2 -Id $id
+            $original = ''
+            if ($pendingOriginalByKey.ContainsKey($key)) { $original = [string]$pendingOriginalByKey[$key] }
+
+            $result[$key] = [pscustomobject]@{
+                Name1    = $activeName1
+                Name2    = $activeName2
+                Id       = $id
+                Original = $original
+                Modded   = $value
+            }
+        }
+
+        if ($content -match '</param>') {
+            $activeName1 = ''
+            $activeName2 = ''
+            $activeLight = $false
+            $pendingOriginalByKey.Clear()
+        }
+    }
+
+    return $result
+}
+
+
+function Get-ParamTweaksPatchLightValueMaps {
+    param([Parameter(Mandatory)][string]$PatchPath)
+
+    $oldValues = @{}
+    $newValues = @{}
+
+    if (-not (Test-Path -LiteralPath $PatchPath -PathType Leaf)) {
+        return [pscustomobject]@{
+            OldValues = $oldValues
+            NewValues = $newValues
+        }
+    }
+
+    $activeName1 = ''
+    $activeName2 = ''
+    $activeLight = $false
+
+    foreach ($line in [System.IO.File]::ReadAllLines($PatchPath)) {
+        $content = Get-ParamTweaksPatchLineContent -Line $line
+
+        if ($content -match '<param\b[^>]*name1="([^"]+)"[^>]*name2="([^"]+)"') {
+            $activeName1 = [string]$Matches[1]
+            $activeName2 = [string]$Matches[2]
+            $activeLight = Test-ParamTweaksLightColorParam -Name1 $activeName1 -Name2 $activeName2
+        }
+
+        if ($activeLight -and $line -match '^-[^-].*<value\s+id="([^"]+)">\s*(.*?)\s*</value>') {
+            $id = [string]$Matches[1]
+            $value = [string]$Matches[2]
+            $key = New-ParamTweaksPatchValueKey -Name1 $activeName1 -Name2 $activeName2 -Id $id
+            $oldValues[$key] = $value
+        }
+        elseif ($activeLight -and $line -match '^\+[^+].*<value\s+id="([^"]+)">\s*(.*?)\s*</value>') {
+            $id = [string]$Matches[1]
+            $value = [string]$Matches[2]
+            $key = New-ParamTweaksPatchValueKey -Name1 $activeName1 -Name2 $activeName2 -Id $id
+            $newValues[$key] = $value
+        }
+
+        if ($content -match '</param>') {
+            $activeName1 = ''
+            $activeName2 = ''
+            $activeLight = $false
+        }
+    }
+
+    return [pscustomobject]@{
+        OldValues = $oldValues
+        NewValues = $newValues
+    }
+}
+
+function Update-ParamTweaksHunkHeaderCounts {
+    param(
+        [Parameter(Mandatory)][string]$Header,
+        [Parameter(Mandatory)]$BodyLines
+    )
+
+    $oldCount = 0
+    $newCount = 0
+
+    foreach ($bodyLineObj in @($BodyLines)) {
+        $bodyLine = [string]$bodyLineObj
+        if ([string]::IsNullOrEmpty($bodyLine)) { continue }
+
+        $prefix = $bodyLine.Substring(0, 1)
+        if ($prefix -eq ' ') {
+            $oldCount++
+            $newCount++
+        }
+        elseif ($prefix -eq '-') {
+            $oldCount++
+        }
+        elseif ($prefix -eq '+') {
+            $newCount++
+        }
+    }
+
+    if ($Header -match '^@@ -(?<oldStart>\d+)(?:,\d+)? \+(?<newStart>\d+)(?:,\d+)?(?<tail> @@.*)$') {
+        return ('@@ -{0},{1} +{2},{3}{4}' -f $Matches.oldStart, $oldCount, $Matches.newStart, $newCount, $Matches.tail)
+    }
+
+    return $Header
+}
+
+function Get-ParamTweaksPatchFileHeaderLines {
+    param([Parameter(Mandatory)][string]$PatchPath)
+
+    $headers = New-Object System.Collections.Generic.List[string]
+    if (-not (Test-Path -LiteralPath $PatchPath -PathType Leaf)) { return @() }
+
+    foreach ($line in [System.IO.File]::ReadAllLines($PatchPath)) {
+        if ($line.StartsWith('diff --git ')) {
+            [void]$headers.Add($line)
+            continue
+        }
+
+        if ($headers.Count -gt 0 -and ($line.StartsWith('index ') -or $line.StartsWith('--- ') -or $line.StartsWith('+++ '))) {
+            [void]$headers.Add($line)
+            if ($line.StartsWith('+++ ')) { break }
+            continue
+        }
+
+        if ($headers.Count -gt 0 -and $line.StartsWith('@@ ')) { break }
+    }
+
+    return @($headers.ToArray())
+}
+
+function Get-ParamTweaksFilteredNoirHunks {
+    param(
+        [Parameter(Mandatory)][string]$NoirPatchPath,
+        [Parameter(Mandatory)]$RemainingKeys,
+        [Parameter(Mandatory)]$HandledKeys,
+        [Parameter(Mandatory)]$FinalValuesByKey,
+        $MainFinalChanges = $null
+    )
+
+    $output = New-Object System.Collections.Generic.List[string]
+    if (-not (Test-Path -LiteralPath $NoirPatchPath -PathType Leaf)) { return @() }
+    if ($RemainingKeys.Count -le 0) { return @() }
+
+    if ($null -eq $MainFinalChanges) { $MainFinalChanges = @{} }
+
+    $lines = [System.IO.File]::ReadAllLines($NoirPatchPath)
+    $i = 0
+
+    while ($i -lt $lines.Count) {
+        $line = [string]$lines[$i]
+        if (-not $line.StartsWith('@@ ')) {
+            $i++
+            continue
+        }
+
+        $hunkHeader = $line
+        $hunk = New-Object System.Collections.Generic.List[string]
+        $i++
+
+        while ($i -lt $lines.Count -and -not ([string]$lines[$i]).StartsWith('@@ ') -and -not ([string]$lines[$i]).StartsWith('diff --git ')) {
+            [void]$hunk.Add([string]$lines[$i])
+            $i++
+        }
+
+        $convertedBody = New-Object System.Collections.Generic.List[string]
+        $activeName1 = ''
+        $activeName2 = ''
+        $activeLight = $false
+        $hunkHasRemainingChange = $false
+
+        foreach ($hlineObj in @($hunk.ToArray())) {
+            $hline = [string]$hlineObj
+            $content = Get-ParamTweaksPatchLineContent -Line $hline
+
+            if ($content -match '<param\b[^>]*name1="([^"]+)"[^>]*name2="([^"]+)"') {
+                $activeName1 = [string]$Matches[1]
+                $activeName2 = [string]$Matches[2]
+                $activeLight = Test-ParamTweaksLightColorParam -Name1 $activeName1 -Name2 $activeName2
+
+                # Param opening tags are structure/context in the selected patch. Noir is
+                # used as a light-color value source, not as a structural patch source.
+                if ($hline.StartsWith('+') -or $hline.StartsWith('-')) {
+                    [void]$convertedBody.Add((' ' + $content))
+                }
+                else {
+                    [void]$convertedBody.Add($hline)
+                }
+                continue
+            }
+
+            $valueInfo = Get-ParamTweaksValueLineInfo -Line $hline
+            if ($null -ne $valueInfo) {
+                $key = New-ParamTweaksPatchValueKey -Name1 $activeName1 -Name2 $activeName2 -Id ([string]$valueInfo.Id)
+
+                if ($activeLight) {
+                    if ($hline.StartsWith('-')) {
+                        if ($RemainingKeys.ContainsKey($key)) {
+                            [void]$convertedBody.Add($hline)
+                            $hunkHasRemainingChange = $true
+                        }
+                        else {
+                            # This light value was already selected in the main hunk.
+                            # Keep it as context, and rewrite it to the final selected
+                            # value when a previous selected hunk already changed it.
+                            $contextLine = (' ' + $content)
+                            if ($HandledKeys.ContainsKey($key) -and $FinalValuesByKey.ContainsKey($key)) {
+                                $contextLine = Set-ParamTweaksValueLineValue -Line $contextLine -Value ([string]$FinalValuesByKey[$key])
+                            }
+                            [void]$convertedBody.Add($contextLine)
+                        }
+                        continue
+                    }
+
+                    if ($hline.StartsWith('+')) {
+                        if ($RemainingKeys.ContainsKey($key)) {
+                            [void]$convertedBody.Add($hline)
+                            $hunkHasRemainingChange = $true
+                        }
+                        # Otherwise skip the Noir + line; the selected/final value is
+                        # represented by the handled context line above.
+                        continue
+                    }
+
+                    if ($HandledKeys.ContainsKey($key) -and $FinalValuesByKey.ContainsKey($key)) {
+                        [void]$convertedBody.Add((Set-ParamTweaksValueLineValue -Line $hline -Value ([string]$FinalValuesByKey[$key])))
+                    }
+                    else {
+                        [void]$convertedBody.Add($hline)
+                    }
+                    continue
+                }
+
+                # Non-light context in a wider Noir hunk must match the file state after
+                # the main/custom patch has applied. Rewrite context values to the final
+                # main/custom value when that value is changed elsewhere in the same patch.
+                if ($hline.StartsWith('-')) {
+                    $contextLine = (' ' + $content)
+                    if ($MainFinalChanges.ContainsKey($key)) {
+                        $contextLine = Set-ParamTweaksValueLineValue -Line $contextLine -Value ([string]$MainFinalChanges[$key].Modded)
+                    }
+                    [void]$convertedBody.Add($contextLine)
+                    continue
+                }
+
+                if ($hline.StartsWith('+')) {
+                    # Noir non-light additions are ignored. Noir is not allowed to override
+                    # main/custom non-light changes.
+                    continue
+                }
+
+                if ($MainFinalChanges.ContainsKey($key)) {
+                    [void]$convertedBody.Add((Set-ParamTweaksValueLineValue -Line $hline -Value ([string]$MainFinalChanges[$key].Modded)))
+                }
+                else {
+                    [void]$convertedBody.Add($hline)
+                }
+                continue
+            }
+
+            # For any non-value non-light changes in Diffs_noir, convert removals to
+            # context and drop additions so the Noir source remains light-only.
+            if (-not $activeLight -and ($hline.StartsWith('-') -or $hline.StartsWith('+'))) {
+                if ($hline.StartsWith('-')) {
+                    [void]$convertedBody.Add((' ' + $content))
+                }
+                continue
+            }
+
+            [void]$convertedBody.Add($hline)
+
+            if ($content -match '</param>') {
+                $activeName1 = ''
+                $activeName2 = ''
+                $activeLight = $false
+            }
+        }
+
+        if ($hunkHasRemainingChange) {
+            [void]$output.Add((Update-ParamTweaksHunkHeaderCounts -Header $hunkHeader -BodyLines @($convertedBody.ToArray())))
+            foreach ($convertedLine in @($convertedBody.ToArray())) {
+                [void]$output.Add([string]$convertedLine)
+            }
+        }
+    }
+
+    return @($output.ToArray())
+}
+
+
+function Write-ParamTweaksTextFileNoBomWithRetry {
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][string]$Text,
+        [int]$MaxAttempts = 20,
+        [int]$DelayMs = 150
+    )
+
+    $encoding = New-Object System.Text.UTF8Encoding($false)
+    $dir = Split-Path -Parent $Path
+    if (-not [string]::IsNullOrWhiteSpace($dir)) {
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    }
+
+    $tmpPath = Join-Path $dir ((Split-Path -Leaf $Path) + ('.tmp.{0}.{1}' -f $PID, [guid]::NewGuid().ToString('N')))
+    $lastError = $null
+
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+        try {
+            [System.IO.File]::WriteAllText($tmpPath, $Text, $encoding)
+
+            if (Test-Path -LiteralPath $Path -PathType Leaf) {
+                [System.IO.File]::Delete($Path)
+            }
+
+            [System.IO.File]::Move($tmpPath, $Path)
+            return
+        }
+        catch {
+            $lastError = $_
+            Start-Sleep -Milliseconds $DelayMs
+        }
+    }
+
+    try {
+        if (Test-Path -LiteralPath $tmpPath -PathType Leaf) {
+            Remove-Item -LiteralPath $tmpPath -Force -ErrorAction SilentlyContinue
+        }
+    }
+    catch {}
+
+    if ($null -ne $lastError) { throw $lastError }
+    throw "Failed to write patch file after $MaxAttempts attempts: $Path"
+}
+
+function Apply-ParamTweaksLightLayerToPatch {
+    param(
+        [Parameter(Mandatory)][string]$PatchPath,
+        [Parameter(Mandatory)][ValidateSet('Vanilla','Noir')][string]$Mode,
+        [string]$NoirPatchPath = ''
+    )
+
+    if (-not (Test-Path -LiteralPath $PatchPath -PathType Leaf)) {
+        throw "Patch file not found: $PatchPath"
+    }
+
+    # Main and Noir are not stacked as complete patch sets. This function treats
+    # Light as an independent source selector:
+    #   Vanilla = every main light-color +value is replaced by the original -value.
+    #   Noir    = main light-color changes that overlap the main patch are replaced
+    #             by Diffs_noir. Wider Noir-only light values are intentionally
+    #             not appended in patch-mode because same-file appended hunks are
+    #             fragile when Main/custom non-light edits are nearby.
+    # Non-light edits from the main/custom patch are left untouched.
+    $mainLightMaps = Get-ParamTweaksPatchLightValueMaps -PatchPath $PatchPath
+    $mainOriginalValues = $mainLightMaps.OldValues
+
+    $noirNewValues = @{}
+    $noirPatchFound = $false
+    if ($Mode -eq 'Noir' -and -not [string]::IsNullOrWhiteSpace($NoirPatchPath) -and (Test-Path -LiteralPath $NoirPatchPath -PathType Leaf)) {
+        $noirMaps = Get-ParamTweaksPatchLightValueMaps -PatchPath $NoirPatchPath
+        $noirNewValues = $noirMaps.NewValues
+        $noirPatchFound = $true
+    }
+
+    $lines = [System.IO.File]::ReadAllLines($PatchPath)
+    $outLines = New-Object System.Collections.Generic.List[string]
+    $activeName1 = ''
+    $activeName2 = ''
+    $activeLight = $false
+    $handledKeys = @{}
+    $finalValuesByKey = @{}
+    $changed = $false
+    $replacedPlus = 0
+    $injectedContext = 0
+    $appendedHunks = 0
+
+    foreach ($lineObj in $lines) {
+        $line = [string]$lineObj
+        $content = Get-ParamTweaksPatchLineContent -Line $line
+
+        if ($content -match '<param\b[^>]*name1="([^"]+)"[^>]*name2="([^"]+)"') {
+            $activeName1 = [string]$Matches[1]
+            $activeName2 = [string]$Matches[2]
+            $activeLight = Test-ParamTweaksLightColorParam -Name1 $activeName1 -Name2 $activeName2
+        }
+
+        if ($activeLight -and $line -match '^\+[^+].*<value\s+id="([^"]+)">\s*(.*?)\s*</value>') {
+            $id = [string]$Matches[1]
+            $currentValue = [string]$Matches[2]
+            $key = New-ParamTweaksPatchValueKey -Name1 $activeName1 -Name2 $activeName2 -Id $id
+            $newValue = $null
+
+            if ($Mode -eq 'Vanilla') {
+                if ($mainOriginalValues.ContainsKey($key)) { $newValue = [string]$mainOriginalValues[$key] }
+            }
+            elseif ($Mode -eq 'Noir') {
+                if ($noirNewValues.ContainsKey($key)) { $newValue = [string]$noirNewValues[$key] }
+                elseif ($mainOriginalValues.ContainsKey($key)) { $newValue = [string]$mainOriginalValues[$key] }
+            }
+
+            if ($null -ne $newValue) {
+                $handledKeys[$key] = $true
+                $finalValuesByKey[$key] = [string]$newValue
+                if ($newValue -ne $currentValue) {
+                    $line = Set-ParamTweaksValueLineValue -Line $line -Value $newValue
+                    $changed = $true
+                    $replacedPlus++
+                }
+            }
+
+            [void]$outLines.Add($line)
+
+            if ($content -match '</param>') {
+                $activeName1 = ''
+                $activeName2 = ''
+                $activeLight = $false
+            }
+            continue
+        }
+
+        # Do not turn main context lines into new -/+ pairs here.
+        # Wider Noir-only light values are emitted later from the Noir patch itself,
+        # with hunk counts rebuilt. Splicing extra lines into a Main hunk can make
+        # the generated patch reject during git apply.
+
+        [void]$outLines.Add($line)
+
+        if ($content -match '</param>') {
+            $activeName1 = ''
+            $activeName2 = ''
+            $activeLight = $false
+        }
+    }
+
+    # Do not append wider Noir hunks into the Main patch file here.
+    # Appending a second same-file diff block can make git apply reject every
+    # patch because the later Noir hunk is checked against a file state that no
+    # longer matches nearby Main/custom non-light changes. For patch-mode safety,
+    # only replace light +value lines that already exist in the Main/custom patch.
+    # Extra Noir-only light values need to be handled in a future XML-state pass
+    # after the original gparam XML has been extracted and Main/custom edits have
+    # been applied.
+
+    if ($changed) {
+        Write-ParamTweaksTextFileNoBomWithRetry -Path $PatchPath -Text ((($outLines.ToArray()) -join "`n") + "`n")
+    }
+
+    return [pscustomobject]@{
+        Changed         = [bool]$changed
+        NoirPatchFound  = [bool]$noirPatchFound
+        ReplacedPlus    = [int]$replacedPlus
+        InjectedContext = [int]$injectedContext
+        AppendedHunks   = [int]$appendedHunks
+    }
+}
+
+function Apply-ParamTweaksLightLayerToPatchSet {
+    param(
+        [Parameter(Mandatory)]$CopiedPatchRows,
+        [Parameter(Mandatory)][ValidateSet('Vanilla','Mod','Noir')][string]$Mode
+    )
+
+    $stats = [ordered]@{
+        Mode            = $Mode
+        FilesProcessed  = 0
+        FilesChanged    = 0
+        NoirFound       = 0
+        NoirMissing     = 0
+        ReplacedPlus    = 0
+        InjectedContext = 0
+        AppendedHunks   = 0
+    }
+
+    if ($Mode -eq 'Mod') {
+        return [pscustomobject]$stats
+    }
+
+    $noirSourceRoot = Get-ParamTweaksNoirSourceRoot
+
+    foreach ($row in @($CopiedPatchRows)) {
+        $destPatch = [string]$row.Dest
+        $relative = [string]$row.Relative
+        if ([string]::IsNullOrWhiteSpace($destPatch) -or -not (Test-Path -LiteralPath $destPatch -PathType Leaf)) { continue }
+
+        $stats.FilesProcessed++
+
+        $noirPatch = ''
+        if ($Mode -eq 'Noir') {
+            $noirPatch = Join-Path $noirSourceRoot $relative
+            if (Test-Path -LiteralPath $noirPatch -PathType Leaf) { $stats.NoirFound++ }
+            else { $stats.NoirMissing++ }
+        }
+
+        $result = Apply-ParamTweaksLightLayerToPatch -PatchPath $destPatch -Mode $Mode -NoirPatchPath $noirPatch
+        if ($result.Changed) { $stats.FilesChanged++ }
+        $stats.ReplacedPlus += [int]$result.ReplacedPlus
+        $stats.InjectedContext += [int]$result.InjectedContext
+        $stats.AppendedHunks += [int]$result.AppendedHunks
+    }
+
+    return [pscustomobject]$stats
+}
+
 function Get-ParamTweaksUserValuesPath {
     $toolRoot = $TxtToolRoot.Text.Trim()
     if ([string]::IsNullOrWhiteSpace($toolRoot)) {
@@ -6276,6 +6946,7 @@ function Invoke-GenerateParamTweaksPatches {
     New-Item -ItemType Directory -Path $paths.DestRoot -Force | Out-Null
 
     $sourceToDest = @{}
+    $copiedPatchRows = New-Object System.Collections.Generic.List[object]
     $copied = 0
 
     # Copy every gparam patch first, including no-value/special cases that do not appear
@@ -6289,6 +6960,7 @@ function Invoke-GenerateParamTweaksPatches {
         Copy-Item -LiteralPath $patch.FullName -Destination $destPatch -Force
 
         $sourceToDest[[System.IO.Path]::GetFullPath($patch.FullName)] = $destPatch
+        [void]$copiedPatchRows.Add([pscustomobject]@{ Source = $patch.FullName; Dest = $destPatch; Relative = $relative })
         $copied++
     }
 
@@ -6350,12 +7022,16 @@ function Invoke-GenerateParamTweaksPatches {
         $modified++
     }
 
-    $TxtParamTweaksStatus.Text = ("Generated custom patch copy: {0} modified / {1} copied. Output: {2}" -f $modified, $copied, $paths.DestRoot)
-    Write-UiLog ("Param tweaks: generated custom patch copy. Modified={0}; Copied={1}; SkippedEditableRows={2}; Output={3}" -f $modified, $copied, $skippedRows, $paths.DestRoot)
+    $lightLayer = Get-ParamTweaksLightLayer
+
+    $statusDetail = ("Generated custom patch copy: {0} Yebis modified / {1} copied. Light={2} will be applied during patch/repack. Output: {3}" -f $modified, $copied, $lightLayer, $paths.DestRoot)
+    $TxtParamTweaksStatus.Text = ("Generated: {0} modified / {1} copied. Light={2}." -f $modified, $copied, $lightLayer)
+    $TxtParamTweaksStatus.ToolTip = $statusDetail
+    Write-UiLog ("Param tweaks: generated custom patch copy. Modified={0}; Copied={1}; SkippedEditableRows={2}; LightSource={3}; LightSourceApply=XMLDirectDuringPatch; Output={4}" -f $modified, $copied, $skippedRows, $lightLayer, $paths.DestRoot)
 
     if (-not $Silent) {
         [System.Windows.MessageBox]::Show(
-            ("Generated custom patch copy.`n`nModified editable patch files: {0}`nCopied patch files: {1}`nSkipped editable rows: {2}`n`nOutput:`n{3}" -f $modified, $copied, $skippedRows, $paths.DestRoot),
+            ("Generated custom patch copy.`n`nModified editable Yebis patch files: {0}`nCopied patch files: {1}`nSkipped editable rows: {2}`nLight source: {3}`n`nLight source is now applied directly to extracted XML during patch/repack, not by rewriting patch hunks.`n`nOutput:`n{4}" -f $modified, $copied, $skippedRows, $lightLayer, $paths.DestRoot),
             'Param tweaks',
             [System.Windows.MessageBoxButton]::OK,
             [System.Windows.MessageBoxImage]::Information
@@ -6390,9 +7066,11 @@ function Invoke-PatchParamTweaksFiles {
     $pwsh = Get-PwshForWorkflow
 
     $mapScriptsRoot = Join-Path (Join-Path $scriptRoot 'Scripts') 'Mapfiles'
-    $paramScript = Join-Path $mapScriptsRoot '05_Mapfiles_BBReborne_Param.ps1'
+    # Tab 3 Param Tweaks uses the dedicated Custom Tab applier.
+    # Tab 2 map workflows still call Scripts\Mapfiles\05_Mapfiles_BBReborne_Param.ps1 unchanged.
+    $paramScript = Join-Path $mapScriptsRoot '09_Mapfiles_BBReborne_Param_CustomTab.ps1'
     if (-not (Test-Path -LiteralPath $paramScript -PathType Leaf)) {
-        throw "Param patch script not found: $paramScript"
+        throw "Custom Param Tweaks script not found: $paramScript. Copy 09_Mapfiles_BBReborne_Param_CustomTab.ps1 into Scripts\Mapfiles."
     }
 
     $gameRoot = $TxtGameRoot.Text.Trim()
@@ -6414,19 +7092,24 @@ function Invoke-PatchParamTweaksFiles {
         '-OutputRoot', $outputRoot,
         '-PatchDir', $paths.DestRoot,
         '-OutputDir', $customOutputDir,
-        '-LogDir', $customLogRoot
+        '-LogDir', $customLogRoot,
+        '-LightSource', (Get-ParamTweaksLightLayer),
+        '-NoirPatchDir', (Get-ParamTweaksNoirSourceRoot)
     )
 
     $argLine = Join-WindowsCommandLine -Arguments $argList
 
     Write-UiLog 'Param tweaks: launching custom Param patch process.'
     Write-UiLog "Param tweaks patch dir: $($paths.DestRoot)"
+    Write-UiLog "Param tweaks light source: $(Get-ParamTweaksLightLayer)"
+    Write-UiLog "Param tweaks Noir patch dir: $(Get-ParamTweaksNoirSourceRoot)"
     Write-UiLog "Param tweaks output dir: $customOutputDir"
     Write-UiLog "Param tweaks log dir: $customLogRoot"
 
     $button = C 'BtnPatchParamTweaksFiles'
     $button.IsEnabled = $false
     $TxtParamTweaksStatus.Text = 'Patching custom param files...'
+    $TxtParamTweaksStatus.ToolTip = 'Patching custom param files...'
 
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
     $proc = Start-Process -FilePath $pwsh -ArgumentList $argLine -WindowStyle Normal -PassThru
@@ -6447,7 +7130,8 @@ function Invoke-PatchParamTweaksFiles {
 
         $state = $sender.Tag
         if (-not $state.Process.HasExited) {
-            $TxtParamTweaksStatus.Text = ("Patching custom param files... {0}" -f (Format-ElapsedSeconds -Seconds $state.Stopwatch.Elapsed.TotalSeconds))
+            $TxtParamTweaksStatus.Text = ("Patching... {0}" -f (Format-ElapsedSeconds -Seconds $state.Stopwatch.Elapsed.TotalSeconds))
+            $TxtParamTweaksStatus.ToolTip = 'Patching custom param files...'
             return
         }
 
@@ -6467,11 +7151,15 @@ function Invoke-PatchParamTweaksFiles {
                 }
             }
 
-            $TxtParamTweaksStatus.Text = ("Custom param patching completed. Output: {0}" -f $state.OutputDir)
+            $completeDetail = ("Custom param patching completed. Output: {0}; LogDir: {1}" -f $state.OutputDir, $state.LogDir)
+            $TxtParamTweaksStatus.Text = 'Custom param patching completed.'
+            $TxtParamTweaksStatus.ToolTip = $completeDetail
             Write-UiLog ("Param tweaks: custom Param patch process completed. Output={0}; LogDir={1}" -f $state.OutputDir, $state.LogDir)
         }
         else {
-            $TxtParamTweaksStatus.Text = ("Custom param patching failed with exit code {0}. See visible PowerShell window / logs." -f $exitCode)
+            $failDetail = ("Custom param patching failed with exit code {0}. Output: {1}; LogDir: {2}" -f $exitCode, $state.OutputDir, $state.LogDir)
+            $TxtParamTweaksStatus.Text = ("Custom param patching failed. Exit code {0}." -f $exitCode)
+            $TxtParamTweaksStatus.ToolTip = $failDetail
             Write-UiLog ("Param tweaks: custom Param patch process failed with exit code {0}. Output={1}; LogDir={2}" -f $exitCode, $state.OutputDir, $state.LogDir)
         }
     })
@@ -6567,9 +7255,11 @@ function Build-ParamTweaksRows {
         [System.Windows.Controls.Grid]::SetColumnSpan($msg, 7)
         Add-ParamTweaksGridChild -Child $msg -Row $rowIndex -Column 0
         $TxtParamTweaksStatus.Text = 'No Yebis gparam patch rows found.'
+        $TxtParamTweaksStatus.ToolTip = 'No Yebis gparam patch rows found.'
     }
     else {
         $TxtParamTweaksStatus.Text = ("Loaded {0} Yebis param tweak row(s)." -f $rowsAdded)
+        $TxtParamTweaksStatus.ToolTip = $TxtParamTweaksStatus.Text
     }
 
     Restore-ParamTweaksUserValues
@@ -7355,10 +8045,16 @@ function Start-VisibleNoirGlobalPatchProcess {
         '-OnlySteps', ($selectedSteps -join ',')
     )
 
+    $noirGlobalNoUpscaleTextures = ([bool](C 'ChkNoirNoUpscaleTextures').IsChecked)
+    if ($noirGlobalNoUpscaleTextures) {
+        $argList += '-NoUpscale'
+    }
+
     $argLine = Join-WindowsCommandLine -Arguments $argList
 
     Write-UiLog ("Noir GLOBAL: launching selected step(s): {0}" -f ($selectedSteps -join ', '))
     Write-UiLog ("Noir GLOBAL: passing -OnlySteps as: {0}" -f ($selectedSteps -join ','))
+    if ($noirGlobalNoUpscaleTextures) { Write-UiLog 'Noir GLOBAL: OBJ embedded texture step will use -NoUpscale.' }
     Write-UiLog 'This uses Scripts\Noir\Global. Step 5 and Step 7 write to BBReborne_noir_obj.'
     Write-UiLog "Runner: $runner"
 

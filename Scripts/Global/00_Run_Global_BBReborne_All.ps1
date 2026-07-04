@@ -58,7 +58,8 @@ param(
     [switch]$NoUnblock,
     [switch]$KeepChildWork,
     [switch]$ContinueOnError,
-    [string[]]$OnlySteps = @()
+    [string[]]$OnlySteps = @(),
+    [switch]$NoUpscale
 )
 
 Set-StrictMode -Version Latest
@@ -573,6 +574,7 @@ Write-Info "ToolPaths   = $configPath"
 Write-Info "PwshExe     = $PwshExe"
 Write-Info "ScriptsRoot = $ScriptsRoot"
 Write-Info "DiffsRoot   = $DiffsRoot"
+Write-Info ("NoUpscale   = {0}" -f ([bool]$NoUpscale))
 Write-Info "ToolRoot    = $ToolRoot"
 Write-Info "CpuThrottle = $CpuThrottle"
 Write-Info "GpuThrottle = $GpuThrottle"
@@ -707,13 +709,27 @@ $steps = @(
 )
 
 
+if ($NoUpscale) {
+    foreach ($step in $steps) {
+        if ([string]$step.Id -eq '07') {
+            $step.ExtraArguments = @($step.ExtraArguments) + '-NoUpscale'
+        }
+    }
+    Write-Info 'NoUpscale active: Global Step 07 will pass -NoUpscale to the OBJ embedded texture script.'
+}
+
 if ($OnlySteps -and $OnlySteps.Count -gt 0) {
     $selectedSet = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-    foreach ($rawStepId in $OnlySteps) {
-        if ([string]::IsNullOrWhiteSpace($rawStepId)) { continue }
-        $clean = ([string]$rawStepId).Trim()
-        if ($clean -match '^\d$') { $clean = ('0{0}' -f $clean) }
-        [void]$selectedSet.Add($clean)
+
+    foreach ($rawStepGroup in $OnlySteps) {
+        if ([string]::IsNullOrWhiteSpace([string]$rawStepGroup)) { continue }
+
+        foreach ($rawStepId in (([string]$rawStepGroup) -split '[,;\s]+')) {
+            if ([string]::IsNullOrWhiteSpace($rawStepId)) { continue }
+            $clean = ([string]$rawStepId).Trim()
+            if ($clean -match '^\d$') { $clean = ('0{0}' -f $clean) }
+            [void]$selectedSet.Add($clean)
+        }
     }
 
     $knownIds = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
