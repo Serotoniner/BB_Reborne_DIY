@@ -43,6 +43,18 @@ function Ensure-Dir([string]$p) {
     [System.IO.Directory]::CreateDirectory($p) | Out-Null
 }
 
+function Get-ShortWorkKey([string]$Value) {
+    if ([string]::IsNullOrWhiteSpace($Value)) { $Value = '_root' }
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($Value.ToLowerInvariant())
+        return ([Convert]::ToHexString($sha.ComputeHash($bytes))).Substring(0, 16).ToLowerInvariant()
+    }
+    finally {
+        if ($sha) { $sha.Dispose() }
+    }
+}
+
 function Count-FilesSafe {
     param([string]$Path,[string]$ExtPattern)
     try {
@@ -166,7 +178,7 @@ if (-not $NoBackup) {
     Ensure-Dir $BackupDir
 }
 
-Write-Host "SCRIPT VERSION: repack_l standalone"
+Write-Host "SCRIPT VERSION: repack_l standalone-main-sha2 (SHA temp folders via Get-ShortWorkKey)"
 Write-Host "RootDir : $rootFull"
 Write-Host "WorkRoot: $WorkRoot"
 Write-Host "LogRoot : $LogRoot"
@@ -209,10 +221,14 @@ foreach ($full in $ddsList) {
     }
 
     $backupPath = if (-not $NoBackup) { Join-Path $BackupDir $rel } else { $null }
+    $relDir = Split-Path $rel -Parent
+    $workKey = Get-ShortWorkKey $relDir
 
     [void]$manifest.Add([PSCustomObject]@{
         FullName   = $full
         Rel        = $rel
+        RelDir     = $relDir
+        WorkKey    = $workKey
         BackupPath = $backupPath
     })
 }
@@ -250,16 +266,14 @@ $results = Invoke-ParallelStageWithProgress `
 
         try {
             $name = [System.IO.Path]::GetFileNameWithoutExtension($file)
-            $parentDir = Split-Path $file -Parent
-            $dirHash = [Convert]::ToHexString([System.Text.Encoding]::UTF8.GetBytes($parentDir))
-            if ($dirHash.Length -gt 32) { $dirHash = $dirHash.Substring(0,32) }
+            $workKey = $item.WorkKey
 
-            $tmpDecode = Join-Path $using:DecodeRoot ($dirHash + "_" + $name)
-            $tmpReenc  = Join-Path $using:ReencRoot  ($dirHash + "_" + $name)
+            $tmpDecode = Join-Path $using:DecodeRoot ($workKey + "_" + $name)
+            $tmpReenc  = Join-Path $using:ReencRoot  ($workKey + "_" + $name)
             [System.IO.Directory]::CreateDirectory($tmpDecode) | Out-Null
             [System.IO.Directory]::CreateDirectory($tmpReenc)  | Out-Null
 
-            $log = Join-Path $using:LogRoot ("repack_l_" + $dirHash + ".log")
+            $log = Join-Path $using:LogRoot ("repack_l_" + $workKey + ".log")
             $leaf = [System.IO.Path]::GetFileNameWithoutExtension($file)
             $outDds = Join-Path $tmpReenc ([System.IO.Path]::GetFileName($file))
             $png = Join-Path $tmpDecode ($name + ".png")

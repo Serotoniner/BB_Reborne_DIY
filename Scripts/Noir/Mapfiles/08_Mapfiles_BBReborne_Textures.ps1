@@ -19,6 +19,7 @@
       <OutputRoot>\BBReborne_noir_textures\map, preserving the same relative paths.
     - Copies matching .tpfbhd files when present next to .tpfbdt files.
     - Runs the existing per-package texture pipeline in place on the copied output files.
+    - Reapplies the tool's WitchyBND v3.0.0.1 roaming settings immediately before extraction.
     - Uses per-map settings from the existing commands_upscale_v2 workflow.
 
     Notes:
@@ -111,6 +112,50 @@ function Get-BBReborneProjectRoot([string]$ToolPathsFile) {
     }
     $scriptsRoot = Split-Path -Parent $PSScriptRoot
     return (Split-Path -Parent $scriptsRoot)
+}
+
+function Get-WitchyBnd3001RoamingSettingsJson {
+    # Keep this profile identical to the WitchyBND v3.0.0.1 settings
+    # defined by BBReborneDIYTool.ps1.
+    $settings = [ordered]@{
+        Bnd                         = $true
+        ParamDefaultValueThreshold = 1
+        ParamCellStyle              = 0
+        Recursive                   = $true
+        EndDelay                    = 100
+        PauseOnError                = $false
+        Parallel                    = $true
+        Expert                      = $false
+        Offline                     = $true
+        TaeFolder                   = $false
+        DeferTools                  = [ordered]@{}
+        Flexible                    = $true
+        LastUpdateCheck             = '2026-01-15T20:01:33.8508924-03:00'
+        SkipUpdateVersion           = '3.0.0.0'
+        LastLaunchedVersion         = '3.0.0.1'
+        BackupMethod                = 1
+        GitBackup                   = $false
+    }
+
+    return ($settings | ConvertTo-Json -Depth 8)
+}
+
+function Write-WitchyBnd3001RoamingSettings {
+    $appData = [Environment]::GetFolderPath('ApplicationData')
+    if ([string]::IsNullOrWhiteSpace($appData)) {
+        throw 'Could not resolve the current user ApplicationData folder for WitchyBND settings.'
+    }
+
+    $settingsPath = Join-Path (Join-Path $appData 'WitchyBND') 'appsettings.user.json'
+    Ensure-Dir (Split-Path -Parent $settingsPath)
+
+    [System.IO.File]::WriteAllText(
+        $settingsPath,
+        (Get-WitchyBnd3001RoamingSettingsJson),
+        (New-Object System.Text.UTF8Encoding($false))
+    )
+
+    Write-Host "WitchyBND v3.0.0.1 settings reapplied: $settingsPath" -ForegroundColor DarkGray
 }
 
 function Invoke-External {
@@ -248,6 +293,9 @@ function Invoke-TexturePipeline {
     Write-Host ("Mode: Apply={0}  Keep={1}" -f (-not $NoApply), $Keep) -ForegroundColor DarkCyan
 
     try {
+        # The OBJ workflow intentionally uses a non-recursive WitchyBND profile.
+        # Restore the tool's v3 texture profile before this package is extracted.
+        Write-WitchyBnd3001RoamingSettings
         Invoke-External -Label '1/7 Extract with WitchyBND' -FilePath $WitchyBndExe -ArgumentList @($archivePath)
 
         $commonArgs = Get-CommonArgs -RootDir $workRoot
@@ -279,7 +327,7 @@ function Invoke-TexturePipeline {
         Invoke-PwshScript -Label '6/7 Fix specular' -ScriptPath $SpecularScript -Args $specularArgs
 
         # RepackL repair is always required for this texture pipeline.
-        $repackLArgs = @('-RootDir', $workRoot, '-TexconvExe', $TexconvExe, '-ThrottleLimit', $ThrottleLimit)
+        $repackLArgs = @('-RootDir', $workRoot, '-TexconvExe', $TexconvExe, '-ThrottleLimit', $ThrottleLimit) + $noirArgs
         if ($Keep) { $repackLArgs += '-Keep' }
         Invoke-PwshScript -Label '6.5/7 Repair _l DDS before repack' -ScriptPath $RepackLScript -Args $repackLArgs
 
@@ -549,7 +597,7 @@ $Profiles = @{
 		"-SigmaHi", 0.04,
 		"-HighlightStart", 0.45,
 		"-PostScale", 0.85,
-		"-GlobalScale", 0.65,
+		"-GlobalScale", 0.60, #was .65
 		"-MaxSpec", 0.55
         )
 	}

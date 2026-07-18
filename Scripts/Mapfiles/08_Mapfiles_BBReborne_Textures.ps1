@@ -544,7 +544,7 @@ $Profiles = @{
 		"-SigmaHi", 0.04,
 		"-HighlightStart", 0.45,
 		"-PostScale", 0.85,
-		"-GlobalScale", 0.65,
+		"-GlobalScale", 0.60, #was .65
 		"-MaxSpec", 0.55
         )
 	}

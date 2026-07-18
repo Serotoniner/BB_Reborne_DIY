@@ -15,6 +15,10 @@ param(
     [int]$ThrottleLimit = 1,
     [switch]$Keep,
 
+    # Optional Noir low-res color pass. The runner must pass -Noir explicitly.
+    [string]$MagickExe = "",
+    [switch]$Noir,
+
     # Backup behavior (matches your other scripts style more closely)
     [string]$BackupDir = "",
     [switch]$NoBackup
@@ -39,9 +43,68 @@ if ($PSVersionTable.PSVersion.Major -lt 7) { throw "Run with PowerShell 7+ (pwsh
 if (-not (Test-Path -LiteralPath $RootDir)) { throw "RootDir not found: $RootDir" }
 if (-not (Test-Path -LiteralPath $TexconvExe)) { throw "texconv.exe not found: $TexconvExe" }
 
+# Minimal Noir Repack L path:
+# - target only true _a_l low-resolution albedo textures
+# - apply only a simple desaturation pass when -Noir is explicitly supplied
+# - preserve the source DXGI format when re-encoding
+# - do not touch _n_l / _r_l / _s_l or other data/control low-res textures
+$NoirActive = [bool]$Noir
+$ResolvedMagickExe = $null
+
+function Resolve-ImageMagickExe {
+    param([string]$RequestedPath)
+
+    if (-not [string]::IsNullOrWhiteSpace($RequestedPath)) {
+        if (Test-Path -LiteralPath $RequestedPath -PathType Leaf) {
+            return (Resolve-Path -LiteralPath $RequestedPath).Path
+        }
+        throw "magick.exe not found: $RequestedPath"
+    }
+
+    $fromPath = Get-Command magick.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($fromPath -and -not [string]::IsNullOrWhiteSpace([string]$fromPath.Source)) {
+        return [string]$fromPath.Source
+    }
+
+    $roots = @(
+        [Environment]::GetFolderPath('ProgramFiles'),
+        [Environment]::GetFolderPath('ProgramFilesX86')
+    ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+
+    foreach ($root in $roots) {
+        $dirs = @(
+            Get-ChildItem -LiteralPath $root -Directory -Filter 'ImageMagick*' -ErrorAction SilentlyContinue |
+            Sort-Object Name -Descending
+        )
+        foreach ($dir in $dirs) {
+            $candidate = Join-Path $dir.FullName 'magick.exe'
+            if (Test-Path -LiteralPath $candidate -PathType Leaf) { return $candidate }
+        }
+    }
+
+    return $null
+}
+
 function Ensure-Dir([string]$p) {
     [System.IO.Directory]::CreateDirectory($p) | Out-Null
 }
+
+function Get-StableWorkKey {
+    param([Parameter(Mandatory=$true)][string]$Text)
+
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($Text.ToLowerInvariant())
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $hash = $sha.ComputeHash($bytes)
+    }
+    finally {
+        $sha.Dispose()
+    }
+
+    # 128 bits is ample for collision avoidance here and keeps paths short.
+    return ([System.Convert]::ToHexString($hash).Substring(0, 32).ToLowerInvariant())
+}
+
 
 function Count-FilesSafe {
     param([string]$Path,[string]$ExtPattern)
@@ -106,7 +169,11 @@ function Invoke-ParallelStageWithProgress {
 }
 
 function Is-LowResRepairFolderName([string]$name) {
-    return $name -match '_(a|r|s|n)_l(?=-tpf-dcx$)'
+    # Minimal path:
+    #   _a_l is decoded/desaturated/re-encoded.
+    #   _n_l/_r_l/_s_l use the v21 byte-preserving top-mip stripper.
+    # No other low-res texture types are rewritten.
+    return $name -match '_(a|n|r|s)_l(?=-tpf-dcx$)'
 }
 
 function Get-TexconvFormatInfo {
@@ -142,6 +209,117 @@ function Get-TexconvFormatInfo {
     }
 }
 
+
+function Copy-DdsTopMipOnly {
+    param(
+        [Parameter(Mandatory=$true)][string]$SourcePath,
+        [Parameter(Mandatory=$true)][string]$DestinationPath
+    )
+
+    [byte[]]$bytes = [System.IO.File]::ReadAllBytes($SourcePath)
+    if ($bytes.Length -lt 128) { throw "DDS is too small: $SourcePath" }
+    if ([System.Text.Encoding]::ASCII.GetString($bytes, 0, 4) -ne 'DDS ') {
+        throw "Not a DDS file: $SourcePath"
+    }
+
+    [uint32]$height = [System.BitConverter]::ToUInt32($bytes, 12)
+    [uint32]$width  = [System.BitConverter]::ToUInt32($bytes, 16)
+    [uint32]$depth  = [System.BitConverter]::ToUInt32($bytes, 24)
+    [uint32]$caps2  = [System.BitConverter]::ToUInt32($bytes, 112)
+    $fourCC = [System.Text.Encoding]::ASCII.GetString($bytes, 84, 4)
+
+    if ($width -lt 1 -or $height -lt 1) {
+        throw "Invalid DDS dimensions: ${width}x${height}"
+    }
+    if (($caps2 -band 0x00000200) -ne 0 -or ($caps2 -band 0x00200000) -ne 0) {
+        throw "Cubemap/volume DDS is not supported by the top-mip stripper: $SourcePath"
+    }
+
+    [int]$dataOffset = 128
+    [int]$blockBytes = 0
+    [long]$topMipBytes = 0
+
+    if ($fourCC -eq 'DX10') {
+        if ($bytes.Length -lt 148) { throw "Truncated DX10 DDS header: $SourcePath" }
+        $dataOffset = 148
+        [uint32]$dxgiFormat = [System.BitConverter]::ToUInt32($bytes, 128)
+        [uint32]$miscFlag   = [System.BitConverter]::ToUInt32($bytes, 136)
+        [uint32]$arraySize  = [System.BitConverter]::ToUInt32($bytes, 140)
+
+        if ($arraySize -ne 1 -or ($miscFlag -band 0x4) -ne 0) {
+            throw "DDS arrays/cubemaps are not supported by the top-mip stripper: $SourcePath"
+        }
+
+        if ($dxgiFormat -in @(70,71,72,79,80,81)) {
+            $blockBytes = 8
+        }
+        elseif ($dxgiFormat -in @(73,74,75,76,77,78,82,83,84,94,95,96,97,98,99)) {
+            $blockBytes = 16
+        }
+        else {
+            # Uncompressed DXGI formats used by this pipeline are uncommon. Abort rather
+            # than silently producing an invalid DDS or changing the source data.
+            throw "Unsupported DXGI format for byte-preserving mip removal: $dxgiFormat ($SourcePath)"
+        }
+    }
+    else {
+        if ($fourCC -in @('DXT1','ATI1','BC4U','BC4S')) {
+            $blockBytes = 8
+        }
+        elseif ($fourCC -in @('DXT2','DXT3','DXT4','DXT5','ATI2','BC5U','BC5S')) {
+            $blockBytes = 16
+        }
+        else {
+            [uint32]$ddsFlags = [System.BitConverter]::ToUInt32($bytes, 8)
+            [uint32]$pitch    = [System.BitConverter]::ToUInt32($bytes, 20)
+            [uint32]$rgbBits  = [System.BitConverter]::ToUInt32($bytes, 88)
+            if (($ddsFlags -band 0x8) -ne 0 -and $pitch -gt 0) {
+                $topMipBytes = [long]$pitch * [long]$height
+            }
+            elseif ($rgbBits -gt 0) {
+                $topMipBytes = [long]$width * [long]$height * [long][Math]::Ceiling($rgbBits / 8.0)
+            }
+            else {
+                throw "Unsupported legacy DDS format '$fourCC': $SourcePath"
+            }
+        }
+    }
+
+    if ($blockBytes -gt 0) {
+        [long]$blocksWide = [Math]::Max(1, [Math]::Ceiling($width / 4.0))
+        [long]$blocksHigh = [Math]::Max(1, [Math]::Ceiling($height / 4.0))
+        $topMipBytes = $blocksWide * $blocksHigh * $blockBytes
+    }
+    if ($depth -gt 1) { $topMipBytes *= $depth }
+
+    [long]$requiredLength = [long]$dataOffset + $topMipBytes
+    if ($topMipBytes -lt 1 -or $requiredLength -gt $bytes.Length) {
+        throw "DDS top mip exceeds available payload: need=$requiredLength have=$($bytes.Length) file=$SourcePath"
+    }
+
+    [byte[]]$outBytes = [byte[]]::new([int]$requiredLength)
+    [System.Array]::Copy($bytes, 0, $outBytes, 0, [int]$requiredLength)
+
+    # Match texconv's valid one-mip headers: mip count 1, texture cap retained,
+    # complex/mipmap caps cleared. Keep the MIPMAPCOUNT flag as texconv does.
+    [System.BitConverter]::GetBytes([uint32]1).CopyTo($outBytes, 28)
+    [uint32]$caps = [System.BitConverter]::ToUInt32($outBytes, 108)
+    $caps = [uint32]($caps -band 0xFFBFFFF7)
+    [System.BitConverter]::GetBytes($caps).CopyTo($outBytes, 108)
+
+    $destParent = Split-Path $DestinationPath -Parent
+    [System.IO.Directory]::CreateDirectory($destParent) | Out-Null
+    [System.IO.File]::WriteAllBytes($DestinationPath, $outBytes)
+
+    return [PSCustomObject]@{
+        SourceBytes = $bytes.Length
+        OutputBytes = $outBytes.Length
+        Width       = $width
+        Height      = $height
+        FourCC      = $fourCC
+    }
+}
+
 $rootFull   = (Resolve-Path -LiteralPath $RootDir).Path
 $rootFull   = $rootFull -replace '[\\/]+$',''
 $rootLeaf   = Split-Path $rootFull -Leaf
@@ -166,14 +344,25 @@ if (-not $NoBackup) {
     Ensure-Dir $BackupDir
 }
 
-Write-Host "SCRIPT VERSION: repack_l standalone"
+Write-Host "SCRIPT VERSION: v33 (Noir Repack L: _a_l simple desat + v21 data top-mip strip)"
 Write-Host "RootDir : $rootFull"
 Write-Host "WorkRoot: $WorkRoot"
 Write-Host "LogRoot : $LogRoot"
 Write-Host "Throttle: $ThrottleLimit"
+Write-Host "Noir mode: $NoirActive"
 Write-Host "Backup  : " -NoNewline
 if ($NoBackup) { Write-Host "disabled" } else { Write-Host $BackupDir }
 Write-Host ""
+
+if ($NoirActive) {
+    $ResolvedMagickExe = Resolve-ImageMagickExe -RequestedPath $MagickExe
+    if ([string]::IsNullOrWhiteSpace($ResolvedMagickExe)) {
+        throw 'Noir _a_l desaturation requires ImageMagick, but magick.exe could not be resolved.'
+    }
+    Write-Host ("ImageMagick: {0}" -f $ResolvedMagickExe)
+    Write-Host "Noir _a_l: simple desaturate only (-modulate 100,0), v16-style -srgbi encode; _n/_r/_s_l use v21 byte-preserving top-mip strip."
+    Write-Host ""
+}
 
 $folders = @(
     Get-ChildItem -LiteralPath $rootFull -Directory -Recurse -Force -ErrorAction SilentlyContinue |
@@ -181,7 +370,7 @@ $folders = @(
 )
 
 if ($folders.Count -eq 0) {
-    Write-Host "No low-res *_l-tpf-dcx folders found."
+    Write-Host "No low-res *_a_l/_n_l/_r_l/_s_l-tpf-dcx folders found."
     return
 }
 
@@ -213,12 +402,13 @@ foreach ($full in $ddsList) {
     [void]$manifest.Add([PSCustomObject]@{
         FullName   = $full
         Rel        = $rel
+        WorkKey    = Get-StableWorkKey -Text $rel
         BackupPath = $backupPath
     })
 }
 
 if (-not $NoBackup) {
-    Write-Host "Backing up original *_l DDS..."
+    Write-Host "Backing up original *_a_l/_n_l/_r_l/_s_l DDS..."
     $i = 0
     foreach ($m in $manifest) {
         Ensure-Dir (Split-Path $m.BackupPath -Parent)
@@ -230,15 +420,17 @@ if (-not $NoBackup) {
 }
 
 $getTexconvFormatInfoDef = ${function:Get-TexconvFormatInfo}.ToString()
+$copyDdsTopMipOnlyDef  = ${function:Copy-DdsTopMipOnly}.ToString()
 
 $results = Invoke-ParallelStageWithProgress `
-    -Activity "RepackL standalone: repair *_l DDS" `
+    -Activity "RepackL standalone: _a_l desat + _n_l/_r_l/_s_l v21 top-mip strip" `
     -InputObject ([object[]]$manifest.ToArray()) `
     -ThrottleLimit $ThrottleLimit `
     -CountPath $ReencRoot `
     -CountFilter "*.dds" `
     -ParallelScript {
         ${function:Get-TexconvFormatInfo} = $using:getTexconvFormatInfoDef
+        ${function:Copy-DdsTopMipOnly} = $using:copyDdsTopMipOnlyDef
 
         $item = $_
         $file = $item.FullName
@@ -246,67 +438,95 @@ $results = Invoke-ParallelStageWithProgress `
         $ok = $false
         $usedIgnoreMips = $false
         $rewritten = $false
+        $noirProcessed = $false
+        $dataTopMipOnly = $false
         $err = $null
 
         try {
             $name = [System.IO.Path]::GetFileNameWithoutExtension($file)
-            $parentDir = Split-Path $file -Parent
-            $dirHash = [Convert]::ToHexString([System.Text.Encoding]::UTF8.GetBytes($parentDir))
-            if ($dirHash.Length -gt 32) { $dirHash = $dirHash.Substring(0,32) }
+            $workKey = $item.WorkKey
 
-            $tmpDecode = Join-Path $using:DecodeRoot ($dirHash + "_" + $name)
-            $tmpReenc  = Join-Path $using:ReencRoot  ($dirHash + "_" + $name)
+            $tmpDecode = Join-Path $using:DecodeRoot ($workKey + "_" + $name)
+            $tmpReenc  = Join-Path $using:ReencRoot  ($workKey + "_" + $name)
             [System.IO.Directory]::CreateDirectory($tmpDecode) | Out-Null
             [System.IO.Directory]::CreateDirectory($tmpReenc)  | Out-Null
 
-            $log = Join-Path $using:LogRoot ("repack_l_" + $dirHash + ".log")
+            $log = Join-Path $using:LogRoot ("repack_l_" + $workKey + ".log")
             $leaf = [System.IO.Path]::GetFileNameWithoutExtension($file)
             $outDds = Join-Path $tmpReenc ([System.IO.Path]::GetFileName($file))
             $png = Join-Path $tmpDecode ($name + ".png")
+            $encodePng = $png
 
-            # Decode source DDS -> PNG first, using -ignoremips fallback when needed.
-            $tcOut = & $using:TexconvExe -nologo -ft png -y -o $tmpDecode $file 2>&1
-            $tcOut | Add-Content -LiteralPath $log
+            $isAlbedoL = ($leaf -match '_a_l(?:$|_)')
+            $isDataLowResL = ($leaf -match '_(n|r|s)_l(?:$|_)')
 
-            if (($LASTEXITCODE -ne 0) -or (-not (Test-Path -LiteralPath $png))) {
-                Remove-Item -LiteralPath $png -Force -ErrorAction SilentlyContinue
-                $tcOut = & $using:TexconvExe -nologo -ignoremips -ft png -y -o $tmpDecode $file 2>&1
-                $tcOut | Add-Content -LiteralPath $log
-                $usedIgnoreMips = $true
-            }
-
-            if (($LASTEXITCODE -ne 0) -or (-not (Test-Path -LiteralPath $png))) {
-                throw "decode failed (normal and -ignoremips)"
-            }
-
-            # Re-encode according to the corresponding non-_l main-line scripts.
-            if ($leaf -match '_s_l(?:$|_)') {
-                # Matches 06_specular_fix.ps1 style
-                $encOut = & $using:TexconvExe -nologo -f BC4_UNORM -dx9 --ignore-srgb -m 1 -y -o $tmpReenc $png 2>&1
-            }
-            elseif ($leaf -match '_a_l(?:$|_)') {
-                # Matches 02_upscale_a_diffuse_2x_ai.ps1 style
-                $encOut = & $using:TexconvExe -nologo -f BC1_UNORM_SRGB -srgbi -m 1 -y -o $tmpReenc $png 2>&1
-            }
-            elseif ($leaf -match '_r_l(?:$|_)') {
-                # Matches 03_upscale_data_linear_rgba_bc1.ps1 style
-                $encOut = & $using:TexconvExe -nologo -f BC1_UNORM -m 1 -y -o $tmpReenc $png 2>&1
-            }
-            elseif ($leaf -match '_n_l(?:$|_)') {
-                # Best match to the main-line normal/height handling
-                $encOut = & $using:TexconvExe -nologo -f BC7_UNORM --ignore-srgb -m 1 -y -o $tmpReenc $png 2>&1
+            if ($isDataLowResL) {
+                # v21 approach:
+                # Preserve the exact compressed top-level data. Do not decode through PNG,
+                # do not run ImageMagick, and do not ask texconv to recompress. Strip the
+                # mip tail byte-for-byte and update only the DDS mip/caps fields.
+                $stripInfo = Copy-DdsTopMipOnly -SourcePath $file -DestinationPath $outDds
+                $encOut = @(
+                    "byte-preserving DDS top-mip strip",
+                    ("sourceBytes={0} outputBytes={1} size={2}x{3} fourCC={4}" -f $stripInfo.SourceBytes, $stripInfo.OutputBytes, $stripInfo.Width, $stripInfo.Height, $stripInfo.FourCC)
+                )
+                $LASTEXITCODE = 0
+                $dataTopMipOnly = $true
+                Add-Content -LiteralPath $log -Value ("[REPACKL-DATA-TOP-MIP-ONLY] " + $leaf + " | v21 byte-preserving top mip; no texconv/color conversion")
             }
             else {
-                $fmtInfo = Get-TexconvFormatInfo -TexconvOutput @($tcOut) -FilePath $file
-                $fmt = $fmtInfo.Format
-                if ([string]::IsNullOrWhiteSpace($fmt)) {
-                    throw "could not determine output format"
+                # _a_l path only: decode source DDS -> PNG first, using -ignoremips fallback when needed.
+                $tcOut = & $using:TexconvExe -nologo -ft png -y -o $tmpDecode $file 2>&1
+                $tcOut | Add-Content -LiteralPath $log
+
+                if (($LASTEXITCODE -ne 0) -or (-not (Test-Path -LiteralPath $png))) {
+                    Remove-Item -LiteralPath $png -Force -ErrorAction SilentlyContinue
+                    $tcOut = & $using:TexconvExe -nologo -ignoremips -ft png -y -o $tmpDecode $file 2>&1
+                    $tcOut | Add-Content -LiteralPath $log
+                    $usedIgnoreMips = $true
                 }
 
-                if ($fmt -like 'BC4_*') {
-                    $encOut = & $using:TexconvExe -nologo -f $fmt -dx9 --ignore-srgb -m 1 -y -o $tmpReenc $png 2>&1
-                } else {
-                    $encOut = & $using:TexconvExe -nologo -f $fmt --ignore-srgb -m 1 -y -o $tmpReenc $png 2>&1
+                if (($LASTEXITCODE -ne 0) -or (-not (Test-Path -LiteralPath $png))) {
+                    throw "decode failed (normal and -ignoremips)"
+                }
+
+                # Noir reset path: only simple desaturation for true low-res albedo.
+                # No gamma, no blur/noise/filter, no moon branch, and no blood/selective-red branch.
+                if ($using:NoirActive -and $isAlbedoL) {
+                    $tmpNoir = Join-Path $tmpDecode "_noir"
+                    [System.IO.Directory]::CreateDirectory($tmpNoir) | Out-Null
+                    $noirPng = Join-Path $tmpNoir ($name + ".png")
+
+                    $imOut = & $using:ResolvedMagickExe $png `
+                        -alpha on `
+                        -modulate 100,0 `
+                        "PNG32:$noirPng" 2>&1
+                    $imOut | Add-Content -LiteralPath $log
+
+                    if ($LASTEXITCODE -ne 0) { throw "Noir _a_l desaturate failed (exit $LASTEXITCODE)" }
+                    if (-not (Test-Path -LiteralPath $noirPng)) { throw "Noir _a_l desaturate did not produce PNG" }
+
+                    $encodePng = $noirPng
+                    $noirProcessed = $true
+                    Add-Content -LiteralPath $log -Value ("[REPACKL-NOIR-A-L-DESAT] " + $file)
+                }
+
+                # _a_l: preserve source BC1/BC7 and UNORM/SRGB distinction.
+                # In Noir mode restore the v16 brightness behavior: preserved source
+                # format + -srgbi + -m 1.
+                $fmtInfo = Get-TexconvFormatInfo -TexconvOutput @($tcOut) -FilePath $file
+                $albedoFmt = $fmtInfo.Format
+                if ($albedoFmt -notin @('BC1_UNORM_SRGB','BC1_UNORM','BC7_UNORM_SRGB','BC7_UNORM')) {
+                    $albedoFmt = 'BC1_UNORM_SRGB'
+                }
+
+                if ($using:NoirActive) {
+                    $encOut = & $using:TexconvExe -nologo -f $albedoFmt -srgbi -m 1 -y -o $tmpReenc $encodePng 2>&1
+                    Add-Content -LiteralPath $log -Value ("[REPACKL-ALBEDO-L-FORMAT] " + $albedoFmt + " | Noir v16-style -srgbi encode")
+                }
+                else {
+                    $encOut = & $using:TexconvExe -nologo -f $albedoFmt -m 1 -y -o $tmpReenc $encodePng 2>&1
+                    Add-Content -LiteralPath $log -Value ("[REPACKL-ALBEDO-L-FORMAT] " + $albedoFmt + " | normal encode")
                 }
             }
 
@@ -361,6 +581,8 @@ $results = Invoke-ParallelStageWithProgress `
                 Ok             = $ok
                 UsedIgnoreMips = $usedIgnoreMips
                 Rewritten      = $rewritten
+                NoirProcessed  = $noirProcessed
+                DataTopMipOnly = $dataTopMipOnly
                 Error          = $err
                 Done           = $true
             }
@@ -370,11 +592,13 @@ $results = Invoke-ParallelStageWithProgress `
 $okCount      = @($results | Where-Object { $_.Ok }).Count
 $ignoreCount  = @($results | Where-Object { $_.UsedIgnoreMips }).Count
 $rewriteCount = @($results | Where-Object { $_.Rewritten }).Count
+$noirCount    = @($results | Where-Object { $_.NoirProcessed }).Count
+$dataTopCount = @($results | Where-Object { $_.DataTopMipOnly }).Count
 $failList     = @($results | Where-Object { -not $_.Ok })
 
 Write-Host ""
-Write-Host ("RepackL standalone done. OK={0} Rewritten={1} UsedIgnoreMips={2} FAIL={3}" -f `
-    $okCount, $rewriteCount, $ignoreCount, $failList.Count)
+Write-Host ("RepackL standalone done. OK={0} Rewritten={1} NoirAlbedoL={2} DataTopMipOnlyL={3} UsedIgnoreMips={4} FAIL={5}" -f `
+    $okCount, $rewriteCount, $noirCount, $dataTopCount, $ignoreCount, $failList.Count)
 
 if ($failList.Count -gt 0) {
     $failList | Select-Object -First 50 File,Error | Format-Table -AutoSize

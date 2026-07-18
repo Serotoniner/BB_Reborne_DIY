@@ -46,7 +46,7 @@ trap {
 	break
 }
 
-Write-Host "SCRIPT VERSION: 2026-02-19 (data magick upscale: disk-verified stages + live progress + apply cleanup + preserve core commands)"
+Write-Host "SCRIPT VERSION: 2026-02-19-main-sha (data magick upscale: disk-verified stages + short SHA temp paths + preserve core commands)"
 
 if ($PSVersionTable.PSVersion.Major -lt 7) { throw "Run with PowerShell 7+ (pwsh)." }
 if (-not (Test-Path -LiteralPath $RootDir))    { throw "RootDir not found: $RootDir" }
@@ -64,6 +64,18 @@ function Get-RelativePath([string]$base, [string]$full) {
 	return $full
 }
 
+
+function Get-ShortWorkKey([string]$Value) {
+	if ([string]::IsNullOrWhiteSpace($Value)) { $Value = '_root' }
+	$sha = [System.Security.Cryptography.SHA256]::Create()
+	try {
+		$bytes = [System.Text.Encoding]::UTF8.GetBytes($Value.ToLowerInvariant())
+		return ([Convert]::ToHexString($sha.ComputeHash($bytes))).Substring(0, 16).ToLowerInvariant()
+	}
+	finally {
+		if ($sha) { $sha.Dispose() }
+	}
+}
 function Is-LowResFolderName([string]$name) { return ($name -match '_l(?=-)') }
 
 function Is-HiresDataFolderName([string]$name) {
@@ -242,20 +254,22 @@ foreach ($f in $ddsList) {
 	$outDir = Join-Path $OutRoot $relDir
 	$outDds = Join-Path $outDir $f.Name
 	
-	$png1Dir = Join-Path $png1Root $relDir
-	$png2Dir = Join-Path $png2Root $relDir
+	# Keep final output paths unchanged, but keep transient PNG stages in
+	# short SHA folders to avoid Windows path-length failures in texconv/ImageMagick.
+	$workKey = Get-ShortWorkKey $relDir
+	
+	$png1Dir = Join-Path $png1Root $workKey
+	$png2Dir = Join-Path $png2Root $workKey
 	
 	$png1 = Join-Path $png1Dir ($base + ".png")
 	$png2 = Join-Path $png2Dir ($base + ".png")
 	
-	$safeRelFolder = ($relDir -replace '[\\/:*?"<>|]', '_')
-	if ([string]::IsNullOrWhiteSpace($safeRelFolder)) { $safeRelFolder = "_root" }
-	$log = Join-Path $LogRoot ("data_magick_" + $safeRelFolder + ".log")
+	$log = Join-Path $LogRoot ("data_magick_" + $workKey + ".log")
 	
 	$backupPath = if ($Apply -and (-not $NoBackup)) { Join-Path $BackupDir $rel } else { $null }
 	
 	[void]$manifest.Add([PSCustomObject]@{
-		FullName=$full; Rel=$rel; RelDir=$relDir; Base=$base
+		FullName=$full; Rel=$rel; RelDir=$relDir; WorkKey=$workKey; Base=$base
 		OutDir=$outDir; OutDds=$outDds
 		Png1Dir=$png1Dir; Png2Dir=$png2Dir
 		Png1=$png1; Png2=$png2

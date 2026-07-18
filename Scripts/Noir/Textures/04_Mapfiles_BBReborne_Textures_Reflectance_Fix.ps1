@@ -384,7 +384,7 @@ trap {
   break
 }
 
-Write-Host "SCRIPT VERSION: 2026-03-07 (reflectance _r: BC1_UNORM_SRGB; disk-verified stages + live progress + apply cleanup + preserve core commands)"
+Write-Host "SCRIPT VERSION: 2026-07-06 v2 (reflectance _r: short hashed external-tool work paths; BC1_UNORM_SRGB; disk-verified stages + live progress)"
 
 if ($PSVersionTable.PSVersion.Major -lt 7) { throw "Run with PowerShell 7+ (pwsh)." }
 if (-not (Test-Path -LiteralPath $RootDir))    { throw "RootDir not found: $RootDir" }
@@ -392,6 +392,19 @@ if (-not (Test-Path -LiteralPath $TexconvExe)) { throw "texconv.exe not found: $
 if (-not (Test-Path -LiteralPath $MagickExe))  { throw "magick.exe not found: $MagickExe" }
 
 function Ensure-Dir([string]$p) { [System.IO.Directory]::CreateDirectory($p) | Out-Null }
+
+function Get-ShortWorkKey([string]$Value) {
+  $normalized = if ($null -eq $Value) { "" } else { $Value.ToLowerInvariant() }
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($normalized)
+    $hash = $sha.ComputeHash($bytes)
+    return ([System.BitConverter]::ToString($hash).Replace('-', '').Substring(0, 32).ToLowerInvariant())
+  }
+  finally {
+    $sha.Dispose()
+  }
+}
 
 function Get-RelativePath([string]$base, [string]$full) {
   $b = (Resolve-Path -LiteralPath $base).Path.TrimEnd('\')
@@ -591,16 +604,15 @@ foreach ($f in $ddsList) {
   $outDir = Join-Path $OutRoot $relDir
   $outDds = Join-Path $outDir $f.Name
 
-  $pngInDir  = Join-Path $pngInRoot $relDir
-  $pngAdjDir = Join-Path $pngAdjRoot $relDir
+  $workKey = Get-ShortWorkKey $rel
+  $pngInDir  = Join-Path $pngInRoot $workKey
+  $pngAdjDir = Join-Path $pngAdjRoot $workKey
 
   $png1   = Join-Path $pngInDir  ($base + ".png")
   $pngAdj = Join-Path $pngAdjDir ($base + "_adj.png")
 
-  $safeRel = ($rel -replace '[\\/:*?"<>|]', '_')
-  $log = Join-Path $LogRoot ("reflfix_" + $safeRel + ".log")
-
-  $encTmp = Join-Path $EncodeTmp ("enc_" + $safeRel)
+  $log = Join-Path $LogRoot ("reflfix_" + $workKey + ".log")
+  $encTmp = Join-Path $EncodeTmp $workKey
 
   $backupPath = if ($Apply -and (-not $NoBackup)) { Join-Path $BackupDir $rel } else { $null }
 

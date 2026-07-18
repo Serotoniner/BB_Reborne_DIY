@@ -42,7 +42,7 @@ trap {
   break
 }
 
-Write-Host "SCRIPT VERSION: 2026-02-19 (disk-verified chaining + live progress)"
+Write-Host "SCRIPT VERSION: 2026-07-06 v2 (short hashed external-tool work paths; disk-verified chaining + live progress)"
 Write-Host ("Alpha   : {0}" -f $Alpha)
 Write-Host ("Keep temps : {0}" -f $Keep)
 
@@ -51,6 +51,19 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
 }
 
 function Ensure-Dir([string]$p) { [System.IO.Directory]::CreateDirectory($p) | Out-Null }
+
+function Get-ShortWorkKey([string]$Value) {
+  $normalized = if ($null -eq $Value) { "" } else { $Value.ToLowerInvariant() }
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($normalized)
+    $hash = $sha.ComputeHash($bytes)
+    return ([System.BitConverter]::ToString($hash).Replace('-', '').Substring(0, 32).ToLowerInvariant())
+  }
+  finally {
+    $sha.Dispose()
+  }
+}
 
 function Cleanup-TempFolders {
   param(
@@ -224,9 +237,10 @@ foreach ($f in $files) {
   $base = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
   $info = Get-DdsInfo $full
 
-  $pngInDir  = Join-Path $pngInRoot  $relDir
-  $pngOutDir = Join-Path $pngOutRoot $relDir
-  $ddsOutDir = Join-Path $ddsOutRoot $relDir
+  $workKey = Get-ShortWorkKey $rel
+  $pngInDir  = Join-Path $pngInRoot  $workKey
+  $pngOutDir = Join-Path $pngOutRoot $workKey
+  $ddsOutDir = Join-Path $ddsOutRoot $workKey
 
   $pngInPath  = Join-Path $pngInDir  ($base + ".png")
   $pngOutPath = Join-Path $pngOutDir ($base + ".png")

@@ -322,7 +322,7 @@ trap {
 	break
 }
 
-Write-Host "SCRIPT VERSION: 2026-02-19 (specular BC4: disk-verified stages + live progress + apply cleanup + preserve core commands + optional FlatBright/BrightBusy branches)"
+Write-Host "SCRIPT VERSION: 2026-02-19-main-sha (specular BC4: disk-verified stages + short SHA temp paths + preserve core commands + optional FlatBright/BrightBusy branches)"
 
 if ($PSVersionTable.PSVersion.Major -lt 7) { throw "Run with PowerShell 7+ (pwsh)." }
 if (-not (Test-Path -LiteralPath $RootDir))    { throw "RootDir not found: $RootDir" }
@@ -340,6 +340,18 @@ function Get-RelativePath([string]$base, [string]$full) {
 	return $full
 }
 
+
+function Get-ShortWorkKey([string]$Value) {
+	if ([string]::IsNullOrWhiteSpace($Value)) { $Value = '_root' }
+	$sha = [System.Security.Cryptography.SHA256]::Create()
+	try {
+		$bytes = [System.Text.Encoding]::UTF8.GetBytes($Value.ToLowerInvariant())
+		return ([Convert]::ToHexString($sha.ComputeHash($bytes))).Substring(0, 16).ToLowerInvariant()
+	}
+	finally {
+		if ($sha) { $sha.Dispose() }
+	}
+}
 function Is-LowResFolderName([string]$name) { return ($name -match '_l(?=-)') }
 
 function Is-SpecularFolderName([string]$name) {
@@ -543,23 +555,27 @@ foreach ($f in $ddsList) {
 	$outDir = Join-Path $OutRoot $relDir
 	$outDds = Join-Path $outDir $f.Name
 	
-	$pngInDir   = Join-Path $pngInRoot   $relDir
-	$pngGrayDir = Join-Path $pngGrayRoot $relDir
-	$pngAdjDir  = Join-Path $pngAdjRoot  $relDir
+	# Keep final output paths unchanged, but keep transient PNG/DDS encode stages
+	# in short SHA folders to avoid Windows path-length failures.
+	$dirKey  = Get-ShortWorkKey $relDir
+	$fileKey = Get-ShortWorkKey $rel
+	
+	$pngInDir   = Join-Path $pngInRoot   $dirKey
+	$pngGrayDir = Join-Path $pngGrayRoot $dirKey
+	$pngAdjDir  = Join-Path $pngAdjRoot  $dirKey
 	
 	$png1    = Join-Path $pngInDir   ($base + ".png")
 	$pngGray = Join-Path $pngGrayDir ($base + "_r.png")
 	$pngAdj  = Join-Path $pngAdjDir  ($base + "_adj.png")
 	
-	$safeRel = ($rel -replace '[\\/:*?"<>|]', '_')
-	$log = Join-Path $LogRoot ("specfix_" + $safeRel + ".log")
+	$log = Join-Path $LogRoot ("specfix_" + $fileKey + ".log")
 	
-	$encTmp = Join-Path $EncodeTmp ("enc_" + $safeRel)
+	$encTmp = Join-Path $EncodeTmp ("enc_" + $fileKey)
 	
 	$backupPath = if ($Apply -and (-not $NoBackup)) { Join-Path $BackupDir $rel } else { $null }
 	
 	[void]$manifest.Add([PSCustomObject]@{
-		FullName=$full; Rel=$rel; RelDir=$relDir; Base=$base
+		FullName=$full; Rel=$rel; RelDir=$relDir; WorkKey=$dirKey; FileKey=$fileKey; Base=$base
 		OutDir=$outDir; OutDds=$outDds
 		PngInDir=$pngInDir; PngGrayDir=$pngGrayDir; PngAdjDir=$pngAdjDir
 		Png1=$png1; PngGray=$pngGray; PngAdj=$pngAdj

@@ -14,7 +14,7 @@
     NOIR FORK:
     - Intended save path: <BBReborneDIYTool>\Scripts\Noir\Global\07_Global_BBReborne_Obj_Textures.ps1
     - Writes final binders under <OutputRoot>\BBReborne_noir_obj\obj.
-    - Uses Scripts\Noir\Textures for diffuse/data passes.
+    - Uses Scripts\Noir\Textures for diffuse, data, reflectance, and specular passes.
     - Passes -Noir to the diffuse pass when launched with -Noir.
 
     Embedded OBJ texture workflow for the BB Reborne DIY Tool.
@@ -36,6 +36,9 @@
     - Copy processed DDS files back into the unpacked object folders, preferring reflectance/specular outputs for _r/_s and falling back to the linear outputs when needed.
     - Repack only modified TPF folders first, remove their temporary extracted folders, then repack only object folders that actually had embedded DDS files routed through the texture passes.
     - Write final object binders under <OutputRoot>\BBReborne_noir_obj\obj.
+    - Validate texture-pass outputs against the staged manifest.
+    - Missing diffuse outputs are preserved as unchanged staged DDS fallbacks so one failed albedo does not block object repack.
+    - Missing data/reflectance/specular outputs still stop the run and preserve diagnostics.
 
     Original game files are never modified. Any cleanup is limited to this script's own
     work directory under <OutputRoot>\_work.
@@ -432,11 +435,20 @@ function Apply-LinearOutputsToStagedDataByManifest {
     }
 
     if ($DataManifest.Count -eq 0) { return $result }
-    if (-not (Test-Path -LiteralPath $DataOutRoot -PathType Container)) {
-        throw "Linear output root not found before applying staged data outputs: $DataOutRoot"
-    }
 
     $missingRows = [System.Collections.Generic.List[object]]::new()
+    if (-not (Test-Path -LiteralPath $DataOutRoot -PathType Container)) {
+        foreach ($entry in $DataManifest) {
+            [void]$missingRows.Add([pscustomobject]@{
+                StageDds = [string]$entry.StageDds
+                ExpectedOutput = ''
+                Reason = "Linear output root not found: $DataOutRoot"
+            })
+        }
+        $result.Missing = $missingRows.Count
+        $missingRows | Export-Csv -LiteralPath $ReportPath -NoTypeInformation -Encoding UTF8
+        return $result
+    }
     $stageRootFull = [IO.Path]::GetFullPath($StageRoot).TrimEnd([char[]]@('\','/'))
 
     foreach ($entry in $DataManifest) {
@@ -473,6 +485,67 @@ function Apply-LinearOutputsToStagedDataByManifest {
     $result.Missing = $missingRows.Count
     if ($missingRows.Count -gt 0) {
         $missingRows | Export-Csv -LiteralPath $ReportPath -NoTypeInformation -Encoding UTF8
+    }
+
+    return $result
+}
+
+function Test-TexturePassOutputsByManifest {
+    param(
+        [Parameter(Mandatory)][object[]]$Manifest,
+        [Parameter(Mandatory)][string]$StageRoot,
+        [Parameter(Mandatory)][string]$OutRoot,
+        [Parameter(Mandatory)][string]$ReportPath,
+        [Parameter(Mandatory)][string]$PassName
+    )
+
+    $result = [pscustomobject]@{
+        Expected   = $Manifest.Count
+        Found      = 0
+        Missing    = 0
+        ReportPath = $ReportPath
+    }
+
+    if ($Manifest.Count -eq 0) { return $result }
+
+    $missingRows = [System.Collections.Generic.List[object]]::new()
+    $stageRootFull = [IO.Path]::GetFullPath($StageRoot).TrimEnd([char[]]@('\','/'))
+    $outRootExists = Test-Path -LiteralPath $OutRoot -PathType Container
+
+    foreach ($entry in $Manifest) {
+        $stageDds = [string]$entry.StageDds
+        $stageFull = [IO.Path]::GetFullPath($stageDds)
+        $expected = ''
+        $reason = ''
+
+        if (-not $stageFull.StartsWith($stageRootFull, [StringComparison]::OrdinalIgnoreCase)) {
+            $reason = 'StageDds is outside StageRoot'
+        } elseif (-not $outRootExists) {
+            $reason = 'Texture pass output root does not exist'
+        } else {
+            $rel = $stageFull.Substring($stageRootFull.Length).TrimStart([char[]]@('\','/'))
+            $expected = Join-Path $OutRoot $rel
+            $processed = Find-ExpectedDdsOutput -Path $expected
+            if (-not [string]::IsNullOrWhiteSpace($processed) -and (Test-Path -LiteralPath $processed -PathType Leaf)) {
+                $result.Found++
+                continue
+            }
+            $reason = "$PassName output not found"
+        }
+
+        [void]$missingRows.Add([pscustomobject]@{
+            StageDds       = $stageDds
+            ExpectedOutput = $expected
+            Pass           = $PassName
+            Reason         = $reason
+        })
+    }
+
+    $result.Missing = $missingRows.Count
+    if ($missingRows.Count -gt 0) {
+        $missingRows | Export-Csv -LiteralPath $ReportPath -NoTypeInformation -Encoding UTF8
+    } elseif (Test-Path -LiteralPath $ReportPath -PathType Leaf) {
+        Remove-Item -LiteralPath $ReportPath -Force
     }
 
     return $result
@@ -1039,8 +1112,8 @@ if (-not $MagickExe) {
 }
 if (-not $DiffuseScript) { $DiffuseScript = Join-Path $noirTexturesScriptRoot '01_Mapfiles_BBReborne_Textures_Upscale_Diffuse_2x_AI.ps1' }
 if (-not $LinearScript) { $LinearScript = Join-Path $noirTexturesScriptRoot '02_Mapfiles_BBReborne_Textures_Upscale_Data_Linear_RGBA_BC1.ps1' }
-if (-not $ReflectanceScript) { $ReflectanceScript = Join-Path $mainTexturesScriptRoot '04_Mapfiles_BBReborne_Textures_Reflectance_Fix.ps1' }
-if (-not $SpecularScript) { $SpecularScript = Join-Path $mainTexturesScriptRoot '05_Mapfiles_BBReborne_Textures_Specular_Fix.ps1' }
+if (-not $ReflectanceScript) { $ReflectanceScript = Join-Path $noirTexturesScriptRoot '04_Mapfiles_BBReborne_Textures_Reflectance_Fix.ps1' }
+if (-not $SpecularScript) { $SpecularScript = Join-Path $noirTexturesScriptRoot '05_Mapfiles_BBReborne_Textures_Specular_Fix.ps1' }
 if (-not $RealEsrganModelName) {
     $RealEsrganModelName = Get-FirstConfigValue -Names @('BBR_RealEsrganModelName','BBR_RealESRGANModelName')
 }
@@ -1321,6 +1394,11 @@ try {
         '-MagickExe', $MagickExe
     )
 
+    # Child texture scripts may return exit code 0 even when an internal stage reports
+    # partial MISSING results. Accumulate exact manifest validation failures, run all
+    # texture passes so every diagnostic log is captured, then abort before copy-back.
+    $texturePassIssues = [System.Collections.Generic.List[object]]::new()
+
     $diffuseOutRoot     = Get-TexturePassOutRoot -RootDir $stageRoot -Kind Diffuse
     $dataOutRoot         = Get-TexturePassOutRoot -RootDir $stageRoot -Kind Data
     $reflectanceOutRoot  = Get-TexturePassOutRoot -RootDir $stageRoot -Kind Reflectance
@@ -1340,6 +1418,18 @@ try {
             -Label 'Stage #4: AI upscale embedded diffuse DDS files' `
             -ScriptPath $DiffuseScript `
             -Args ($commonArgs + $realEsrganArgs + $textureScriptExtraArgs + $noUpscaleArgs + $noirArgs)
+
+        $diffuseValidationReport = Join-Path $script:RunWorkDir 'diffuse_pass_missing.csv'
+        $diffuseValidation = Test-TexturePassOutputsByManifest `
+            -Manifest $diffuseManifest `
+            -StageRoot $stageRoot `
+            -OutRoot $diffuseOutRoot `
+            -ReportPath $diffuseValidationReport `
+            -PassName 'Diffuse'
+        Write-Info ("  Diffuse outputs validated: {0}/{1}; missing={2}" -f $diffuseValidation.Found, $diffuseValidation.Expected, $diffuseValidation.Missing)
+        if ($diffuseValidation.Missing -gt 0) {
+            Write-Warning ("  Diffuse texture pass has missing outputs: {0}. These entries will fall back to the staged original DDS during copy-back. Diagnostics: {1}" -f $diffuseValidation.Missing, $diffuseValidationReport)
+        }
     } else {
         Write-Info 'Stage #4: no embedded diffuse DDS files; skipping AI pass.'
     }
@@ -1364,11 +1454,12 @@ try {
         Write-Info ("  Linear outputs applied back onto staged texture root for downstream shine fixes: {0}" -f $linearApplyResult.Applied)
         Write-Info ("  Linear outputs missing during staged copy-back: {0}" -f $linearApplyResult.Missing)
 
-        if ($linearApplyResult.Applied -eq 0) {
-            throw "Linear pass produced no manifest-mapped DDS outputs to apply back onto texture_stage. The _r/_s shine fixes would run on original staged DDS files. Report: $linearApplyReport"
-        }
-        if ($linearApplyResult.Missing -gt 0) {
-            Write-Warning ("  Some linear outputs were missing before shine fixes. See: {0}" -f $linearApplyReport)
+        if ($linearApplyResult.Missing -gt 0 -or $linearApplyResult.Applied -eq 0) {
+            [void]$texturePassIssues.Add([pscustomobject]@{
+                Pass='Linear'; Expected=$dataManifest.Count; Found=$linearApplyResult.Applied
+                Missing=$linearApplyResult.Missing; ReportPath=$linearApplyReport
+            })
+            Write-Warning ("  Linear texture pass has missing outputs: {0}. Shine-fix passes will run for diagnostics, but copy-back/repack will be blocked." -f $linearApplyResult.Missing)
         }
     } else {
         Write-Info 'Stage #5: no embedded data DDS files; skipping linear pass.'
@@ -1379,6 +1470,22 @@ try {
             -Label 'Stage #6: Fix embedded reflectance DDS files (_r)' `
             -ScriptPath $ReflectanceScript `
             -Args ($commonArgs + @('-ThrottleLimit', ([string]$CpuThrottle)) + $Profile.ReflectanceArgs + $textureScriptExtraArgs)
+
+        $reflectanceValidationReport = Join-Path $script:RunWorkDir 'reflectance_pass_missing.csv'
+        $reflectanceValidation = Test-TexturePassOutputsByManifest `
+            -Manifest $reflectanceManifest `
+            -StageRoot $stageRoot `
+            -OutRoot $reflectanceOutRoot `
+            -ReportPath $reflectanceValidationReport `
+            -PassName 'Reflectance'
+        Write-Info ("  Reflectance outputs validated: {0}/{1}; missing={2}" -f $reflectanceValidation.Found, $reflectanceValidation.Expected, $reflectanceValidation.Missing)
+        if ($reflectanceValidation.Missing -gt 0) {
+            [void]$texturePassIssues.Add([pscustomobject]@{
+                Pass='Reflectance'; Expected=$reflectanceValidation.Expected; Found=$reflectanceValidation.Found
+                Missing=$reflectanceValidation.Missing; ReportPath=$reflectanceValidationReport
+            })
+            Write-Warning ("  Reflectance texture pass has missing outputs: {0}. Diagnostics will be preserved." -f $reflectanceValidation.Missing)
+        }
     } else {
         Write-Info 'Stage #6: no embedded reflectance DDS files; skipping reflectance fix pass.'
     }
@@ -1388,8 +1495,31 @@ try {
             -Label 'Stage #7: Fix embedded specular DDS files (_s)' `
             -ScriptPath $SpecularScript `
             -Args ($commonArgs + @('-ThrottleLimit', ([string]$CpuThrottle)) + $Profile.SpecularArgs + $textureScriptExtraArgs)
+
+        $specularValidationReport = Join-Path $script:RunWorkDir 'specular_pass_missing.csv'
+        $specularValidation = Test-TexturePassOutputsByManifest `
+            -Manifest $specularManifest `
+            -StageRoot $stageRoot `
+            -OutRoot $specularOutRoot `
+            -ReportPath $specularValidationReport `
+            -PassName 'Specular'
+        Write-Info ("  Specular outputs validated: {0}/{1}; missing={2}" -f $specularValidation.Found, $specularValidation.Expected, $specularValidation.Missing)
+        if ($specularValidation.Missing -gt 0) {
+            [void]$texturePassIssues.Add([pscustomobject]@{
+                Pass='Specular'; Expected=$specularValidation.Expected; Found=$specularValidation.Found
+                Missing=$specularValidation.Missing; ReportPath=$specularValidationReport
+            })
+            Write-Warning ("  Specular texture pass has missing outputs: {0}. Diagnostics will be preserved." -f $specularValidation.Missing)
+        }
     } else {
         Write-Info 'Stage #7: no embedded specular DDS files; skipping specular fix pass.'
+    }
+
+    if ($texturePassIssues.Count -gt 0) {
+        $validationSummary = Join-Path $script:RunWorkDir 'texture_pass_validation_failures.csv'
+        $texturePassIssues | Export-Csv -LiteralPath $validationSummary -NoTypeInformation -Encoding UTF8
+        $totalMissing = ($texturePassIssues | Measure-Object -Property Missing -Sum).Sum
+        throw "Texture processing completed with partial failures across $($texturePassIssues.Count) pass(es), total missing outputs: $totalMissing. Copy-back and repack were blocked. Work folder and all child logs were preserved. Summary: $validationSummary"
     }
 
     Write-Stage ''

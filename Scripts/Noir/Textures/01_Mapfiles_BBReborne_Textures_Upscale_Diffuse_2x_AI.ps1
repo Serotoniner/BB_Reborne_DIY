@@ -53,7 +53,7 @@ trap {
 	break
 }
 
-Write-Host "SCRIPT VERSION: 2026-02-19 (AI upscale: disk-verified stages + live progress + apply cleanup + preserve core commands)"
+Write-Host "SCRIPT VERSION: v9-noir-exclude-a-dirt (Noir 01: dimension guard + exclude _a_dirt blend/detail textures)"
 
 if ($PSVersionTable.PSVersion.Major -lt 7) { throw "Run with PowerShell 7+ (pwsh)." }
 if (-not (Test-Path -LiteralPath $RootDir)) { throw "RootDir not found: $RootDir" }
@@ -62,6 +62,22 @@ if (-not (Test-Path -LiteralPath $RealEsrganExe)) { throw "realesrgan exe not fo
 if (-not (Test-Path -LiteralPath $MagickExe)) { throw "magick.exe not found: $MagickExe" }
 
 function Ensure-Dir([string]$p) { [System.IO.Directory]::CreateDirectory($p) | Out-Null }
+
+function Get-StableWorkKey {
+	param([Parameter(Mandatory=$true)][string]$Text)
+
+	$bytes = [System.Text.Encoding]::UTF8.GetBytes($Text.ToLowerInvariant())
+	$sha = [System.Security.Cryptography.SHA256]::Create()
+	try {
+		$hash = $sha.ComputeHash($bytes)
+	}
+	finally {
+		$sha.Dispose()
+	}
+
+	# 128 bits is ample for collision avoidance here and keeps paths short.
+	return ([System.Convert]::ToHexString($hash).Substring(0, 32).ToLowerInvariant())
+}
 
 function Get-RelativePath([string]$base, [string]$full) {
 	$b = (Resolve-Path -LiteralPath $base).Path.TrimEnd('\')
@@ -72,9 +88,23 @@ function Get-RelativePath([string]$base, [string]$full) {
 	return $full
 }
 
+function Is-HiresDiffuseToken([string]$name) {
+    # Strict high-res albedo selector.
+    # Exclude:
+    #   *_a_l      low-res albedo handled by Repack L
+    #   *_a_dirt   dirt/blend/detail textures; these are not safe to desaturate/upscale as plain diffuse
+    return ($name -match '_(a)(?=(_|-|\.|$))') `
+        -and ($name -notmatch '_a_l(?=(_|-|\.|$))') `
+        -and ($name -notmatch '_a_dirt(?=(_|-|\.|$))') `
+        -and ($name -notmatch '_l(?=(_|-|\.|$))')
+}
+
 function Is-HiresDiffuseFolderName([string]$name) {
-	# Diffuse token _a (followed by _ or -), and NOT low-res token "_l-" (your rule)
-	return ($name -match '_(a)(?=(_|-))') -and ($name -notmatch '_l(?=-)')
+	return Is-HiresDiffuseToken $name
+}
+
+function Is-HiresDiffuseTextureName([string]$name) {
+	return Is-HiresDiffuseToken $name
 }
 function LooksLikeSkyName([string]$s) {
 	return ($s -match '(?i)(sky|cloud|clond|cirrus)')
@@ -95,6 +125,7 @@ function LooksLikeBloodName([string]$s) {
 # Keep red splats/deposits colored while desaturating the rest.
 $NoirBloodMaskHueAdd = 50
 $NoirBloodMaskThreshold = 75
+$NoirMoonRgbScale = "0.75"
 
 function Find-ExpectedFile {
 	param([Parameter(Mandatory=$true)][string]$Path)
@@ -286,22 +317,53 @@ Write-Host ""
 # --------------------------------------------------------------------------------------
 # Collect target DDS (hires diffuse folders) + manifest
 # --------------------------------------------------------------------------------------
-$folders = @(Get-ChildItem -LiteralPath $rootFull -Directory -Recurse -Force |
-Where-Object { $_.Name -like "*-tpf-dcx" -and (Is-HiresDiffuseFolderName $_.Name) })
+# Original targeting selected only folders whose TPF folder name contained the _a token.
+# Some map packages can hide regular albedo DDS files inside less-standard folder names,
+# so also inspect DDS filenames and include only matching *_a DDS from those folders.
+# --------------------------------------------------------------------------------------
+$allTpfFolders = @(Get-ChildItem -LiteralPath $rootFull -Directory -Recurse -Force |
+Where-Object { $_.Name -like "*-tpf-dcx" })
 
-if ($folders.Count -eq 0) {
-	Write-Host "No hires diffuse (*_a* but not *_l-*) '-tpf-dcx' folders found."
+if ($allTpfFolders.Count -eq 0) {
+	Write-Host "No '-tpf-dcx' folders found."
 	return
 }
 
-Write-Host ("Target folders (hires a_diffuse): {0}" -f $folders.Count)
-
 $ddsList = New-Object System.Collections.ArrayList
-foreach ($fld in $folders) {
+$folderNameMatches = 0
+$fileNameOnlyMatches = 0
+$missedFolderLog = Join-Path $LogRoot "expanded_albedo_targeting_file_name_matches.csv"
+"Folder,DDS" | Set-Content -LiteralPath $missedFolderLog
+
+foreach ($fld in $allTpfFolders) {
 	$dds = @(Get-ChildItem -LiteralPath $fld.FullName -Filter *.dds -File -ErrorAction SilentlyContinue)
-	foreach ($d in $dds) { [void]$ddsList.Add($d) }
+	if ($dds.Count -eq 0) { continue }
+
+	$folderIsDiffuse = Is-HiresDiffuseFolderName $fld.Name
+	if ($folderIsDiffuse) {
+		$folderNameMatches++
+		foreach ($d in $dds) { [void]$ddsList.Add($d) }
+		continue
+	}
+
+	# Expanded fallback: only add DDS files whose own name identifies them as hires albedo.
+	$matchingDds = @($dds | Where-Object { Is-HiresDiffuseTextureName $_.Name })
+	foreach ($d in $matchingDds) {
+		[void]$ddsList.Add($d)
+		$fileNameOnlyMatches++
+		('"{0}","{1}"' -f $fld.FullName, $d.Name) | Add-Content -LiteralPath $missedFolderLog
+	}
 }
-Write-Host ("Total DDS files in those folders: {0}" -f $ddsList.Count)
+
+if ($ddsList.Count -eq 0) {
+	Write-Host "No hires diffuse/albedo DDS found by folder name or DDS filename."
+	return
+}
+
+Write-Host ("Target folders by folder name (_a): {0}" -f $folderNameMatches)
+Write-Host ("Extra DDS matched by filename only: {0}" -f $fileNameOnlyMatches)
+Write-Host ("Total target DDS files: {0}" -f $ddsList.Count)
+if ($fileNameOnlyMatches -gt 0) { Write-Host ("Expanded targeting log: {0}" -f $missedFolderLog) }
 Write-Host ""
 
 if ($ddsList.Count -eq 0) { return }
@@ -322,17 +384,21 @@ foreach ($f in $ddsList) {
 	$outDir   = Join-Path $OutRoot $relDir
 	$outDds   = Join-Path $outDir $f.Name
 	
-	$png1Dir  = Join-Path $png1Root $relDir
-	$png4Dir  = Join-Path $png4Root $relDir
-	$png2Dir  = Join-Path $png2Root $relDir
+	# OBJ texture extraction produces very deep relative paths. Real-ESRGAN can
+	# silently fail when its input or output path crosses the legacy Windows path
+	# boundary, even when PowerShell and texconv can still access the same tree.
+	# Keep final outputs in their original relative structure, but flatten all PNG
+	# intermediates into a stable, per-file hashed directory.
+	$workKey = Get-StableWorkKey -Text $rel
+	$png1Dir = Join-Path $png1Root $workKey
+	$png4Dir = Join-Path $png4Root $workKey
+	$png2Dir = Join-Path $png2Root $workKey
 	
 	$png1 = Join-Path $png1Dir ($base + ".png")
 	$png4 = Join-Path $png4Dir ($base + ".png")
 	$png2 = Join-Path $png2Dir ($base + ".png")
 	
-	$safeRelFolder = ($relDir -replace '[\\/:*?"<>|]', '_')
-	if ([string]::IsNullOrWhiteSpace($safeRelFolder)) { $safeRelFolder = "_root" }
-	$log = Join-Path $LogRoot ("ai_upscale_" + $safeRelFolder + ".log")
+	$log = Join-Path $LogRoot ("ai_upscale_" + $workKey + ".log")
 	
 	$backupPath = if ($Apply -and (-not $NoBackup)) { Join-Path $BackupDir $rel } else { $null }
 	
@@ -342,7 +408,7 @@ foreach ($f in $ddsList) {
 	$isSkyOrMoon = [bool]($isSky -or $isMoon)
 
 	[void]$manifest.Add([PSCustomObject]@{
-		FullName=$full; Rel=$rel; RelDir=$relDir; Base=$base
+		FullName=$full; Rel=$rel; RelDir=$relDir; Base=$base; WorkKey=$workKey
 		IsSky = [bool]$isSky
 		IsMoon = [bool]$isMoon
 		IsBlood = [bool]$isBlood
@@ -577,34 +643,50 @@ if ($needBuild) {
 					
 					$noirActive = [bool]$using:Noir
 					$isBlood = [bool]$_.IsBlood
+					$isMoon = [bool]$_.IsMoon
 					$preserveRed = [bool]$_.IsSkyOrMoon
+					$bloodHueAdd = [int]$using:NoirBloodMaskHueAdd
+					$bloodThreshold = [int]$using:NoirBloodMaskThreshold
 
 					if ($using:Use1xNoUpscale) {
 						if ($noirActive -and $isBlood) {
-							$imOut = & $using:MagickExe $png1 `
-							-alpha on `
-							\( -clone 0 -colorspace gray -colorspace sRGB \) `
-							\( -clone 0 -alpha off -colorspace HSL -channel 0 -separate +channel `
-							-evaluate AddModulus ${using:NoirBloodMaskHueAdd}% `
-							-solarize 50% -level 0x50% `
-							-threshold ${using:NoirBloodMaskThreshold}% \) `
-							-swap 0,1 -alpha off -compose over -composite `
-							"PNG32:$png2" 2>&1
+							$imArgs = @(
+								$png1,
+								'-alpha', 'on',
+								# Save the post-resize alpha before the color-only blood composite.
+								'(', '-clone', '0', '-alpha', 'extract', '-write', 'mpr:bloodAlpha', '+delete', ')',
+								'(', '-clone', '0', '-colorspace', 'gray', '-colorspace', 'sRGB', ')',
+								'(', '-clone', '0', '-alpha', 'off', '-colorspace', 'HSL', '-channel', '0', '-separate', '+channel',
+								'-evaluate', 'AddModulus', ('{0}%' -f $bloodHueAdd),
+								'-solarize', '50%', '-level', '0x50%',
+								'-threshold', ('{0}%' -f $bloodThreshold), ')',
+								'-swap', '0,1', '-compose', 'over', '-composite',
+								# Restore the exact source alpha so decals remain splatters rather than opaque polygons.
+								'mpr:bloodAlpha', '-alpha', 'off', '-compose', 'CopyAlpha', '-composite',
+								"PNG32:$png2"
+							)
+							$imOut = & $using:MagickExe @imArgs 2>&1
 						}
 						elseif ($noirActive -and (-not $isBlood) -and $preserveRed) {
-							$imOut = & $using:MagickExe $png1 `
-							-alpha on `
-							-colorspace RGB `
-							-gamma 2.4 `
-							-filter Mitchell `
-							-attenuate 0.06 +noise Gaussian `
-							-gaussian-blur 0x0.25 `
-							-ordered-dither o8x8,1 `
-							-gamma 0.454545 `
-							-channel G -fx 'min(g,r*0.45)' `
-							-channel B -fx 'min(b,r*0.30)' `
-							+channel `
-							"PNG32:$png2" 2>&1
+							$imArgs = @(
+								$png1,
+								'-alpha', 'on',
+								'-colorspace', 'RGB',
+								'-gamma', '2.4',
+								'-filter', 'Mitchell',
+								'-attenuate', '0.06', '+noise', 'Gaussian',
+								'-gaussian-blur', '0x0.25',
+								'-ordered-dither', 'o8x8,1',
+								'-gamma', '0.454545',
+								'-channel', 'G', '-fx', 'min(g,r*0.45)',
+								'-channel', 'B', '-fx', 'min(b,r*0.30)',
+								'+channel'
+							)
+							if ($isMoon) {
+								$imArgs += @('-channel', 'RGB', '-evaluate', 'Multiply', $using:NoirMoonRgbScale, '+channel')
+							}
+							$imArgs += "PNG32:$png2"
+							$imOut = & $using:MagickExe @imArgs 2>&1
 						}
 						elseif ($noirActive -and (-not $isBlood)) {
 							$imOut = & $using:MagickExe $png1 `
@@ -634,37 +716,50 @@ if ($needBuild) {
 					}
 					else {
 						if ($noirActive -and $isBlood) {
-							$imOut = & $using:MagickExe $png1 `
-							-alpha on `
-							-colorspace RGB `
-							-gamma 2.4 `
-							-filter Mitchell -resize "200%" `
-							-attenuate 0.06 +noise Gaussian `
-							-gaussian-blur 0x0.25 `
-							-ordered-dither o8x8,1 `
-							-gamma 0.454545 `
-							\( -clone 0 -colorspace gray -colorspace sRGB \) `
-							\( -clone 0 -alpha off -colorspace HSL -channel 0 -separate +channel `
-							-evaluate AddModulus ${using:NoirBloodMaskHueAdd}% `
-							-solarize 50% -level 0x50% `
-							-threshold ${using:NoirBloodMaskThreshold}% \) `
-							-swap 0,1 -alpha off -compose over -composite `
-							"PNG32:$png2" 2>&1
+							$imArgs = @(
+								$png1,
+								'-alpha', 'on',
+								'-colorspace', 'RGB',
+								'-gamma', '2.4',
+								'-filter', 'Mitchell', '-resize', '200%',
+								'-attenuate', '0.06', '+noise', 'Gaussian',
+								'-gaussian-blur', '0x0.25',
+								'-ordered-dither', 'o8x8,1',
+								'-gamma', '0.454545',
+								# Save the post-resize alpha before the color-only blood composite.
+								'(', '-clone', '0', '-alpha', 'extract', '-write', 'mpr:bloodAlpha', '+delete', ')',
+								'(', '-clone', '0', '-colorspace', 'gray', '-colorspace', 'sRGB', ')',
+								'(', '-clone', '0', '-alpha', 'off', '-colorspace', 'HSL', '-channel', '0', '-separate', '+channel',
+								'-evaluate', 'AddModulus', ('{0}%' -f $bloodHueAdd),
+								'-solarize', '50%', '-level', '0x50%',
+								'-threshold', ('{0}%' -f $bloodThreshold), ')',
+								'-swap', '0,1', '-compose', 'over', '-composite',
+								# Restore the exact source alpha so decals remain splatters rather than opaque polygons.
+								'mpr:bloodAlpha', '-alpha', 'off', '-compose', 'CopyAlpha', '-composite',
+								"PNG32:$png2"
+							)
+							$imOut = & $using:MagickExe @imArgs 2>&1
 						}
 						elseif ($noirActive -and (-not $isBlood) -and $preserveRed) {
-							$imOut = & $using:MagickExe $png1 `
-							-alpha on `
-							-colorspace RGB `
-							-gamma 2.4 `
-							-filter Mitchell -resize "200%" `
-							-attenuate 0.06 +noise Gaussian `
-							-gaussian-blur 0x0.25 `
-							-ordered-dither o8x8,1 `
-							-gamma 0.454545 `
-							-channel G -fx 'min(g,r*0.45)' `
-							-channel B -fx 'min(b,r*0.30)' `
-							+channel `
-							"PNG32:$png2" 2>&1
+							$imArgs = @(
+								$png1,
+								'-alpha', 'on',
+								'-colorspace', 'RGB',
+								'-gamma', '2.4',
+								'-filter', 'Mitchell', '-resize', '200%',
+								'-attenuate', '0.06', '+noise', 'Gaussian',
+								'-gaussian-blur', '0x0.25',
+								'-ordered-dither', 'o8x8,1',
+								'-gamma', '0.454545',
+								'-channel', 'G', '-fx', 'min(g,r*0.45)',
+								'-channel', 'B', '-fx', 'min(b,r*0.30)',
+								'+channel'
+							)
+							if ($isMoon) {
+								$imArgs += @('-channel', 'RGB', '-evaluate', 'Multiply', $using:NoirMoonRgbScale, '+channel')
+							}
+							$imArgs += "PNG32:$png2"
+							$imOut = & $using:MagickExe @imArgs 2>&1
 						}
 						elseif ($noirActive -and (-not $isBlood)) {
 							$imOut = & $using:MagickExe $png1 `
@@ -768,21 +863,45 @@ if ($needBuild) {
 					# Downscale 4x -> 2x, or 4x -> 1x when -NoUpscale is used, with ImageMagick (log output)
 					$noirActive = [bool]$using:Noir
 					$isBlood = [bool]$_.IsBlood
+					$isMoon = [bool]$_.IsMoon
 					$preserveRed = [bool]$_.IsSkyOrMoon
+					$bloodHueAdd = [int]$using:NoirBloodMaskHueAdd
+					$bloodThreshold = [int]$using:NoirBloodMaskThreshold
 
 					if ($using:Use1xNoUpscale) {
 						if ($noirActive -and $isBlood) {
-							$imOut = & $using:MagickExe $png4 `
-							-colorspace RGB -alpha on -filter Mitchell -resize "25%" `
-							\( -clone 0 -colorspace gray -colorspace sRGB \) `
-							\( -clone 0 -alpha off -colorspace HSL -channel 0 -separate +channel `
-							-evaluate AddModulus ${using:NoirBloodMaskHueAdd}% `
-							-solarize 50% -level 0x50% `
-							-threshold ${using:NoirBloodMaskThreshold}% \) `
-							-swap 0,1 -alpha off -compose over -composite $png2 2>&1
+							$imArgs = @(
+								$png4,
+								'-colorspace', 'RGB', '-alpha', 'on', '-filter', 'Mitchell', '-resize', '25%',
+								# Save the post-resize alpha before the color-only blood composite.
+								'(', '-clone', '0', '-alpha', 'extract', '-write', 'mpr:bloodAlpha', '+delete', ')',
+								'(', '-clone', '0', '-colorspace', 'gray', '-colorspace', 'sRGB', ')',
+								'(', '-clone', '0', '-alpha', 'off', '-colorspace', 'HSL', '-channel', '0', '-separate', '+channel',
+								'-evaluate', 'AddModulus', ('{0}%' -f $bloodHueAdd),
+								'-solarize', '50%', '-level', '0x50%',
+								'-threshold', ('{0}%' -f $bloodThreshold), ')',
+								'-swap', '0,1', '-compose', 'over', '-composite',
+								# Restore the exact source alpha so decals remain splatters rather than opaque polygons.
+								'mpr:bloodAlpha', '-alpha', 'off', '-compose', 'CopyAlpha', '-composite',
+								$png2
+							)
+							$imOut = & $using:MagickExe @imArgs 2>&1
 						}
 						elseif ($noirActive -and (-not $isBlood) -and $preserveRed) {
-							$imOut = & $using:MagickExe $png4 -colorspace RGB -alpha on -filter Mitchell -resize "25%" -attenuate 0.06 +noise Gaussian '(' +clone -modulate 100,0 ')' -compose CopyGreen -channel G -composite -compose CopyBlue -channel B -composite +channel $png2 2>&1 
+							# Preserve the original red channel while replacing green and blue with
+							# the HSL-lightness grayscale value. Moon textures receive an additional
+							# RGB reduction; sky textures keep the existing treatment unchanged.
+							$imArgs = @(
+								$png4,
+								'-colorspace', 'RGB', '-alpha', 'on', '-filter', 'Mitchell', '-resize', '25%',
+								'-attenuate', '0.06', '+noise', 'Gaussian',
+								'-channel', 'GB', '-fx', '(max(r,max(g,b))+min(r,min(g,b)))/2', '+channel'
+							)
+							if ($isMoon) {
+								$imArgs += @('-channel', 'RGB', '-evaluate', 'Multiply', $using:NoirMoonRgbScale, '+channel')
+							}
+							$imArgs += $png2
+							$imOut = & $using:MagickExe @imArgs 2>&1
 						}
 						elseif ($noirActive -and (-not $isBlood)) {
 							$imOut = & $using:MagickExe $png4 -colorspace RGB -alpha on -filter Mitchell -resize "25%" -attenuate 0.06 +noise Gaussian -modulate 100,0 $png2 2>&1 
@@ -793,17 +912,38 @@ if ($needBuild) {
 					}
 					else {
 						if ($noirActive -and $isBlood) {
-							$imOut = & $using:MagickExe $png4 `
-							-colorspace RGB -alpha on -filter Mitchell -resize "50%" `
-							\( -clone 0 -colorspace gray -colorspace sRGB \) `
-							\( -clone 0 -alpha off -colorspace HSL -channel 0 -separate +channel `
-							-evaluate AddModulus ${using:NoirBloodMaskHueAdd}% `
-							-solarize 50% -level 0x50% `
-							-threshold ${using:NoirBloodMaskThreshold}% \) `
-							-swap 0,1 -alpha off -compose over -composite $png2 2>&1
+							$imArgs = @(
+								$png4,
+								'-colorspace', 'RGB', '-alpha', 'on', '-filter', 'Mitchell', '-resize', '50%',
+								# Save the post-resize alpha before the color-only blood composite.
+								'(', '-clone', '0', '-alpha', 'extract', '-write', 'mpr:bloodAlpha', '+delete', ')',
+								'(', '-clone', '0', '-colorspace', 'gray', '-colorspace', 'sRGB', ')',
+								'(', '-clone', '0', '-alpha', 'off', '-colorspace', 'HSL', '-channel', '0', '-separate', '+channel',
+								'-evaluate', 'AddModulus', ('{0}%' -f $bloodHueAdd),
+								'-solarize', '50%', '-level', '0x50%',
+								'-threshold', ('{0}%' -f $bloodThreshold), ')',
+								'-swap', '0,1', '-compose', 'over', '-composite',
+								# Restore the exact source alpha so decals remain splatters rather than opaque polygons.
+								'mpr:bloodAlpha', '-alpha', 'off', '-compose', 'CopyAlpha', '-composite',
+								$png2
+							)
+							$imOut = & $using:MagickExe @imArgs 2>&1
 						}
 						elseif ($noirActive -and (-not $isBlood) -and $preserveRed) {
-							$imOut = & $using:MagickExe $png4 -colorspace RGB -alpha on -filter Mitchell -resize "50%" -attenuate 0.06 +noise Gaussian '(' +clone -modulate 100,0 ')' -compose CopyGreen -channel G -composite -compose CopyBlue -channel B -composite +channel $png2 2>&1 
+							# Preserve the original red channel while replacing green and blue with
+							# the HSL-lightness grayscale value. Moon textures receive an additional
+							# RGB reduction; sky textures keep the existing treatment unchanged.
+							$imArgs = @(
+								$png4,
+								'-colorspace', 'RGB', '-alpha', 'on', '-filter', 'Mitchell', '-resize', '50%',
+								'-attenuate', '0.06', '+noise', 'Gaussian',
+								'-channel', 'GB', '-fx', '(max(r,max(g,b))+min(r,min(g,b)))/2', '+channel'
+							)
+							if ($isMoon) {
+								$imArgs += @('-channel', 'RGB', '-evaluate', 'Multiply', $using:NoirMoonRgbScale, '+channel')
+							}
+							$imArgs += $png2
+							$imOut = & $using:MagickExe @imArgs 2>&1
 						}
 						elseif ($noirActive -and (-not $isBlood)) {
 							$imOut = & $using:MagickExe $png4 -colorspace RGB -alpha on -filter Mitchell -resize "50%" -attenuate 0.06 +noise Gaussian -modulate 100,0 $png2 2>&1 
@@ -815,6 +955,42 @@ if ($needBuild) {
 					$imOut | Add-Content -LiteralPath $log
 					if ($LASTEXITCODE -ne 0) { throw "ImageMagick resize failed (exit $LASTEXITCODE)" }
 					if (-not (Test-Path -LiteralPath $png2)) { throw "Downscale did not produce PNG: $png2" }
+
+					# Safety guard: the intended output is exactly 2x the source dimensions,
+					# or 1x when -NoUpscale is used. A few very large textures can otherwise
+					# slip through as Real-ESRGAN's raw 4x output, creating huge DDS files.
+					$targetScale = if ($using:Use1xNoUpscale) { 1 } else { 2 }
+					$srcDimRaw = ((& $using:MagickExe identify -format "%w,%h" $png1 2>&1) -join "").Trim()
+					if ($srcDimRaw -notmatch '^(\d+),(\d+)$') {
+						throw "Could not identify source PNG dimensions: $png1 | $srcDimRaw"
+					}
+					$srcW = [int]$Matches[1]
+					$srcH = [int]$Matches[2]
+					$targetW = [int]($srcW * $targetScale)
+					$targetH = [int]($srcH * $targetScale)
+
+					$outDimRaw = ((& $using:MagickExe identify -format "%w,%h" $png2 2>&1) -join "").Trim()
+					if ($outDimRaw -notmatch '^(\d+),(\d+)$') {
+						throw "Could not identify output PNG dimensions: $png2 | $outDimRaw"
+					}
+					$outW = [int]$Matches[1]
+					$outH = [int]$Matches[2]
+
+					if (($outW -ne $targetW) -or ($outH -ne $targetH)) {
+						$resizeSpec = ("{0}x{1}!" -f $targetW, $targetH)
+						$tmpClamp = Join-Path $_.Png2Dir ($_.Base + ".dimension_guard.png")
+						Add-Content -LiteralPath $log -Value ("[DIMENSION-GUARD] " + $_.Rel + " output=" + $outW + "x" + $outH + " expected=" + $targetW + "x" + $targetH + " resize=" + $resizeSpec)
+						$clampOut = & $using:MagickExe $png2 -alpha on -filter Mitchell -resize $resizeSpec "PNG32:$tmpClamp" 2>&1
+						$clampOut | Add-Content -LiteralPath $log
+						if ($LASTEXITCODE -ne 0) { throw "Dimension guard resize failed (exit $LASTEXITCODE)" }
+						if (-not (Test-Path -LiteralPath $tmpClamp)) { throw "Dimension guard did not produce PNG: $tmpClamp" }
+						Move-Item -LiteralPath $tmpClamp -Destination $png2 -Force
+
+						$verifyDimRaw = ((& $using:MagickExe identify -format "%w,%h" $png2 2>&1) -join "").Trim()
+						if ($verifyDimRaw -ne ("{0},{1}" -f $targetW, $targetH)) {
+							throw "Dimension guard verify failed: expected $targetW,$targetH got $verifyDimRaw"
+						}
+					}
 					
 					$ok = $true
 				}

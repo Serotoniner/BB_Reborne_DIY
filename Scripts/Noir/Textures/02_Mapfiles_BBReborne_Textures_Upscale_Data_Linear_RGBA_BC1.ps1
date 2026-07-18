@@ -46,7 +46,7 @@ trap {
 	break
 }
 
-Write-Host "SCRIPT VERSION: 2026-02-19 (data magick upscale: disk-verified stages + live progress + apply cleanup + preserve core commands)"
+Write-Host "SCRIPT VERSION: v2 (2026-07-06: short hashed temporary paths; processing and final outputs unchanged)"
 
 if ($PSVersionTable.PSVersion.Major -lt 7) { throw "Run with PowerShell 7+ (pwsh)." }
 if (-not (Test-Path -LiteralPath $RootDir))    { throw "RootDir not found: $RootDir" }
@@ -54,6 +54,20 @@ if (-not (Test-Path -LiteralPath $TexconvExe)) { throw "texconv.exe not found: $
 if (-not (Test-Path -LiteralPath $MagickExe))  { throw "magick.exe not found: $MagickExe" }
 
 function Ensure-Dir([string]$p) { [System.IO.Directory]::CreateDirectory($p) | Out-Null }
+
+# Keep temporary ImageMagick/texconv paths short for deeply nested OBJ texture trees.
+# The full relative path is still retained for final DDS output and Apply.
+function Get-ShortWorkKey([string]$Value) {
+	$sha = [System.Security.Cryptography.SHA256]::Create()
+	try {
+		$bytes = [System.Text.Encoding]::UTF8.GetBytes($Value.ToLowerInvariant())
+		$hash = $sha.ComputeHash($bytes)
+		return ([System.BitConverter]::ToString($hash).Replace("-", "").Substring(0, 32).ToLowerInvariant())
+	}
+	finally {
+		$sha.Dispose()
+	}
+}
 
 function Get-RelativePath([string]$base, [string]$full) {
 	$b = (Resolve-Path -LiteralPath $base).Path.TrimEnd('\')
@@ -242,15 +256,17 @@ foreach ($f in $ddsList) {
 	$outDir = Join-Path $OutRoot $relDir
 	$outDds = Join-Path $outDir $f.Name
 	
-	$png1Dir = Join-Path $png1Root $relDir
-	$png2Dir = Join-Path $png2Root $relDir
+	# Do not mirror the deep OBJ tree inside temporary folders. A stable per-file key
+	# prevents Windows/native-tool path-length failures while avoiding collisions.
+	$workKey = Get-ShortWorkKey -Value $rel
+	$png1Dir = Join-Path $png1Root $workKey
+	$png2Dir = Join-Path $png2Root $workKey
 	
+	# Preserve the original basename so texconv still emits the expected DDS name.
 	$png1 = Join-Path $png1Dir ($base + ".png")
 	$png2 = Join-Path $png2Dir ($base + ".png")
 	
-	$safeRelFolder = ($relDir -replace '[\\/:*?"<>|]', '_')
-	if ([string]::IsNullOrWhiteSpace($safeRelFolder)) { $safeRelFolder = "_root" }
-	$log = Join-Path $LogRoot ("data_magick_" + $safeRelFolder + ".log")
+	$log = Join-Path $LogRoot ("data_magick_" + $workKey + ".log")
 	
 	$backupPath = if ($Apply -and (-not $NoBackup)) { Join-Path $BackupDir $rel } else { $null }
 	

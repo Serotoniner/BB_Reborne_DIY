@@ -42,7 +42,7 @@ trap {
   break
 }
 
-Write-Host "SCRIPT VERSION: 2026-02-19 (disk-verified chaining + live progress)"
+Write-Host "SCRIPT VERSION: 2026-02-19-main-sha (disk-verified chaining + short SHA temp paths)"
 Write-Host ("Alpha   : {0}" -f $Alpha)
 Write-Host ("Keep temps : {0}" -f $Keep)
 
@@ -51,6 +51,18 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
 }
 
 function Ensure-Dir([string]$p) { [System.IO.Directory]::CreateDirectory($p) | Out-Null }
+
+function Get-ShortWorkKey([string]$Value) {
+	if ([string]::IsNullOrWhiteSpace($Value)) { $Value = '_root' }
+	$sha = [System.Security.Cryptography.SHA256]::Create()
+	try {
+		$bytes = [System.Text.Encoding]::UTF8.GetBytes($Value.ToLowerInvariant())
+		return ([Convert]::ToHexString($sha.ComputeHash($bytes))).Substring(0, 16).ToLowerInvariant()
+	}
+	finally {
+		if ($sha) { $sha.Dispose() }
+	}
+}
 
 function Cleanup-TempFolders {
   param(
@@ -224,9 +236,13 @@ foreach ($f in $files) {
   $base = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
   $info = Get-DdsInfo $full
 
-  $pngInDir  = Join-Path $pngInRoot  $relDir
-  $pngOutDir = Join-Path $pngOutRoot $relDir
-  $ddsOutDir = Join-Path $ddsOutRoot $relDir
+  # Keep final output paths unchanged, but keep transient PNG/DDS stages
+  # in short SHA folders to avoid Windows path-length failures.
+  $workKey = Get-ShortWorkKey $relDir
+
+  $pngInDir  = Join-Path $pngInRoot  $workKey
+  $pngOutDir = Join-Path $pngOutRoot $workKey
+  $ddsOutDir = Join-Path $ddsOutRoot $workKey
 
   $pngInPath  = Join-Path $pngInDir  ($base + ".png")
   $pngOutPath = Join-Path $pngOutDir ($base + ".png")
@@ -235,7 +251,7 @@ foreach ($f in $files) {
   $backupPath = if ($Apply) { Join-Path $backupDir $rel } else { $null }
 
   [void]$manifest.Add([PSCustomObject]@{
-    FullName=$full; Rel=$rel; Base=$base; Width=$info.Width; Height=$info.Height; Mips=$info.Mips
+    FullName=$full; Rel=$rel; WorkKey=$workKey; Base=$base; Width=$info.Width; Height=$info.Height; Mips=$info.Mips
     BackupPath=$backupPath
     PngInDir=$pngInDir; PngOutDir=$pngOutDir; DdsOutDir=$ddsOutDir
     PngInPath=$pngInPath; PngOutPath=$pngOutPath; DdsOutPath=$ddsOutPath

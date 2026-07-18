@@ -223,7 +223,7 @@ trap {
 	break
 }
 
-Write-Host "SCRIPT VERSION: 2026-02-19 (heightfix: disk-verified stages + live progress + apply cleanup + preserve core commands)"
+Write-Host "SCRIPT VERSION: 2026-07-06 v2 (heightfix: short hashed external-tool work paths; disk-verified stages + live progress + apply cleanup)"
 
 if ($PSVersionTable.PSVersion.Major -lt 7) { throw "Run with PowerShell 7+ (pwsh)." }
 if (-not (Test-Path -LiteralPath $RootDir))    { throw "RootDir not found: $RootDir" }
@@ -237,6 +237,19 @@ Write-Host "BlueMin: $BlueMin"
 Write-Host "BlueMax: $BlueMax"
 
 function Ensure-Dir([string]$p) { [System.IO.Directory]::CreateDirectory($p) | Out-Null }
+
+function Get-ShortWorkKey([string]$Value) {
+	$normalized = if ($null -eq $Value) { "" } else { $Value.ToLowerInvariant() }
+	$sha = [System.Security.Cryptography.SHA256]::Create()
+	try {
+		$bytes = [System.Text.Encoding]::UTF8.GetBytes($normalized)
+		$hash = $sha.ComputeHash($bytes)
+		return ([System.BitConverter]::ToString($hash).Replace('-', '').Substring(0, 32).ToLowerInvariant())
+	}
+	finally {
+		$sha.Dispose()
+	}
+}
 
 function Get-RelativePath([string]$base, [string]$full) {
 	$b = (Resolve-Path -LiteralPath $base).Path.TrimEnd('\')
@@ -351,6 +364,7 @@ $rootParent = Split-Path $rootFull -Parent
 $OutRoot   = Join-Path $rootParent ("{0}_heightfix_blue_from_rg" -f $rootLeaf)
 $WorkRoot  = Join-Path $OutRoot "_work"
 $LogRoot   = Join-Path $OutRoot "_logs"
+$EncodeTmp = Join-Path $OutRoot "_encode_tmp"
 
 # Stage work dirs (disk-verified pipeline)
 $pngInRoot  = Join-Path $WorkRoot "stage1_png_in"   # DDS -> PNG
@@ -363,6 +377,7 @@ if ([string]::IsNullOrWhiteSpace($BackupDir)) {
 Ensure-Dir $OutRoot
 Ensure-Dir $WorkRoot
 Ensure-Dir $LogRoot
+Ensure-Dir $EncodeTmp
 Ensure-Dir $pngInRoot
 Ensure-Dir $pngOutRoot
 if ($Apply -and (-not $NoBackup)) { Ensure-Dir $BackupDir }
@@ -371,6 +386,7 @@ Write-Host "RootDir : $rootFull"
 Write-Host "OutRoot : $OutRoot"
 Write-Host "WorkRoot: $WorkRoot"
 Write-Host "LogRoot : $LogRoot"
+Write-Host "EncodeTmp: $EncodeTmp"
 Write-Host "Throttle: $ThrottleLimit"
 Write-Host "ProgressEvery: $ProgressEvery"
 Write-Host "BlurSigma: $BlurSigma"
@@ -428,16 +444,15 @@ foreach ($f in $ddsList) {
 	$outDir   = Join-Path $OutRoot $relDir
 	$outDds   = Join-Path $outDir $f.Name
 	
-	$pngInDir  = Join-Path $pngInRoot  $relDir
-	$pngOutDir = Join-Path $pngOutRoot $relDir
+	$workKey = Get-ShortWorkKey $rel
+	$pngInDir  = Join-Path $pngInRoot  $workKey
+	$pngOutDir = Join-Path $pngOutRoot $workKey
 	
 	$png1 = Join-Path $pngInDir  ($base + ".png")
 	$png2 = Join-Path $pngOutDir ($base + ".png")
 	
-	$safeRelFolder = ($relDir -replace '[\\/:*?"<>|]', '_')
-	if ([string]::IsNullOrWhiteSpace($safeRelFolder)) { $safeRelFolder = "_root" }
-	$log = Join-Path $LogRoot ("heightfix_" + $safeRelFolder + ".log")
-	
+	$log = Join-Path $LogRoot ("heightfix_" + $workKey + ".log")
+	$encTmp = Join-Path $EncodeTmp $workKey
 	$backupPath = if ($Apply -and (-not $NoBackup)) { Join-Path $BackupDir $rel } else { $null }
 	
 	[void]$manifest.Add([PSCustomObject]@{
@@ -445,7 +460,7 @@ foreach ($f in $ddsList) {
 		OutDir=$outDir; OutDds=$outDds
 		PngInDir=$pngInDir; PngOutDir=$pngOutDir
 		Png1=$png1; Png2=$png2
-		Log=$log
+		Log=$log; EncTmpDir=$encTmp
 		BackupPath=$backupPath
 		
 		# Stage-populated (disk-verified)
@@ -852,7 +867,7 @@ if ($needBuild) {
 					[System.IO.Directory]::CreateDirectory($_.OutDir) | Out-Null
 					
 					$png2      = $_.Png2Actual
-					$outFolder = $_.OutDir
+					$tmpDir    = $_.EncTmpDir
 					$outDds    = $_.OutDds
 					$log       = $_.Log
 					$fmtOut    = $_.FmtOut
@@ -861,16 +876,23 @@ if ($needBuild) {
 					if ([string]::IsNullOrWhiteSpace($fmtOut)) { throw "Missing FmtOut" }
 					
 					$useDx9 = ($fmtOut -like "BC4_*")
+					[System.IO.Directory]::CreateDirectory($tmpDir) | Out-Null
+					Get-ChildItem -LiteralPath $tmpDir -Filter *.dds -File -ErrorAction SilentlyContinue |
+						Remove-Item -Force -ErrorAction SilentlyContinue
 					
 					if ($useDx9) {
-						$tcOut2 = & $using:TexconvExe -nologo -f $fmtOut -dx9 --ignore-srgb -m 1 -y -o $outFolder $png2 2>&1
+						$tcOut2 = & $using:TexconvExe -nologo -f $fmtOut -dx9 --ignore-srgb -m 1 -y -o $tmpDir $png2 2>&1
 						} else {
-						$tcOut2 = & $using:TexconvExe -nologo -f $fmtOut --ignore-srgb -m 1 -y -o $outFolder $png2 2>&1
+						$tcOut2 = & $using:TexconvExe -nologo -f $fmtOut --ignore-srgb -m 1 -y -o $tmpDir $png2 2>&1
 					}
 					
 					$tcOut2 | Add-Content -LiteralPath $log
 					if ($LASTEXITCODE -ne 0) { throw "texconv encode failed (exit=$LASTEXITCODE) fmt=$fmtOut" }
-					if (-not (Test-Path -LiteralPath $outDds)) { throw "texconv did not produce DDS: $outDds" }
+					$produced = @(Get-ChildItem -LiteralPath $tmpDir -Filter *.dds -File -ErrorAction SilentlyContinue)
+					if ($produced.Count -ne 1) { throw "texconv produced $($produced.Count) DDS files in tmp dir (expected 1)." }
+					if (Test-Path -LiteralPath $outDds) { Remove-Item -LiteralPath $outDds -Force }
+					Move-Item -LiteralPath $produced[0].FullName -Destination $outDds -Force
+					if (-not (Test-Path -LiteralPath $outDds)) { throw "Final DDS missing after move: $outDds" }
 					
 					$ok = $true
 				}
@@ -917,7 +939,7 @@ if ($needBuild) {
 }
 
 # --------------------------------------------------------------------------------------
-# APPLY (always uses whatever DDS exists in OutRoot, excluding _work/_logs)
+# APPLY (always uses whatever DDS exists in OutRoot, excluding _work/_logs/_encode_tmp)
 # --------------------------------------------------------------------------------------
 if (-not $wantApply) {
     Write-Host ""
@@ -927,7 +949,7 @@ if (-not $wantApply) {
 }
 
 $applyFiles = @(Get-ChildItem -LiteralPath $OutRoot -Recurse -Filter *.dds -File -ErrorAction SilentlyContinue |
-Where-Object { $_.FullName -notmatch '\\_work\\' -and $_.FullName -notmatch '\\_logs\\' })
+Where-Object { $_.FullName -notmatch '\\_work\\' -and $_.FullName -notmatch '\\_logs\\' -and $_.FullName -notmatch '\\_encode_tmp\\' })
 
 Write-Host ("Applying outputs from OutRoot (existing + new). OutRoot DDS count: {0}" -f $applyFiles.Count)
 

@@ -52,7 +52,7 @@ trap {
 	break
 }
 
-Write-Host "SCRIPT VERSION: 2026-02-19 (AI upscale: disk-verified stages + live progress + apply cleanup + preserve core commands)"
+Write-Host "SCRIPT VERSION: 2026-02-19-main-sha2 (AI upscale: short SHA temp paths + letter-L-safe _a detection)"
 
 if ($PSVersionTable.PSVersion.Major -lt 7) { throw "Run with PowerShell 7+ (pwsh)." }
 if (-not (Test-Path -LiteralPath $RootDir)) { throw "RootDir not found: $RootDir" }
@@ -71,9 +71,23 @@ function Get-RelativePath([string]$base, [string]$full) {
 	return $full
 }
 
+
+function Get-ShortWorkKey([string]$Value) {
+	if ([string]::IsNullOrWhiteSpace($Value)) { $Value = '_root' }
+	$sha = [System.Security.Cryptography.SHA256]::Create()
+	try {
+		$bytes = [System.Text.Encoding]::UTF8.GetBytes($Value.ToLowerInvariant())
+		return ([Convert]::ToHexString($sha.ComputeHash($bytes))).Substring(0, 16).ToLowerInvariant()
+	}
+	finally {
+		if ($sha) { $sha.Dispose() }
+	}
+}
 function Is-HiresDiffuseFolderName([string]$name) {
-	# Diffuse token _a (followed by _ or -), and NOT low-res token "_l-" (your rule)
-	return ($name -match '_(a)(?=(_|-))') -and ($name -notmatch '_l(?=-)')
+	# Hires diffuse/albedo token _a. Exclude only the true low-res albedo suffix _a_l.
+	# Do not reject names that contain an unrelated _L_ token, e.g. o355004_AM_M_1100_L_a.
+	if ($name -match '_a_l(?=(_|-|\.|$))') { return $false }
+	return ($name -match '_a(?=(_|-|\.|$))')
 }
 function LooksLikeSkyName([string]$s) {
 	return ($s -match '(?i)(sky|cloud|clond|cirrus)')
@@ -302,24 +316,26 @@ foreach ($f in $ddsList) {
 	$outDir   = Join-Path $OutRoot $relDir
 	$outDds   = Join-Path $outDir $f.Name
 	
-	$png1Dir  = Join-Path $png1Root $relDir
-	$png4Dir  = Join-Path $png4Root $relDir
-	$png2Dir  = Join-Path $png2Root $relDir
+	# Keep final output paths unchanged, but keep all transient PNG stages in
+	# short SHA folders to avoid Windows path-length failures in texconv/ImageMagick/Real-ESRGAN.
+	$workKey = Get-ShortWorkKey $relDir
+	
+	$png1Dir  = Join-Path $png1Root $workKey
+	$png4Dir  = Join-Path $png4Root $workKey
+	$png2Dir  = Join-Path $png2Root $workKey
 	
 	$png1 = Join-Path $png1Dir ($base + ".png")
 	$png4 = Join-Path $png4Dir ($base + ".png")
 	$png2 = Join-Path $png2Dir ($base + ".png")
 	
-	$safeRelFolder = ($relDir -replace '[\\/:*?"<>|]', '_')
-	if ([string]::IsNullOrWhiteSpace($safeRelFolder)) { $safeRelFolder = "_root" }
-	$log = Join-Path $LogRoot ("ai_upscale_" + $safeRelFolder + ".log")
+	$log = Join-Path $LogRoot ("ai_upscale_" + $workKey + ".log")
 	
 	$backupPath = if ($Apply -and (-not $NoBackup)) { Join-Path $BackupDir $rel } else { $null }
 	
 	$isSky = (LooksLikeSkyName $base) -or (LooksLikeSkyName $relDir)
 	
 	[void]$manifest.Add([PSCustomObject]@{
-		FullName=$full; Rel=$rel; RelDir=$relDir; Base=$base
+		FullName=$full; Rel=$rel; RelDir=$relDir; WorkKey=$workKey; Base=$base
 		IsSky = [bool]$isSky
 		OutDir=$outDir; OutDds=$outDds
 		Png1Dir=$png1Dir; Png4Dir=$png4Dir; Png2Dir=$png2Dir

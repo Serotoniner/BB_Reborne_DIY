@@ -384,7 +384,7 @@ trap {
   break
 }
 
-Write-Host "SCRIPT VERSION: 2026-03-07 (reflectance _r: BC1_UNORM_SRGB; disk-verified stages + live progress + apply cleanup + preserve core commands)"
+Write-Host "SCRIPT VERSION: 2026-03-07-main-sha (reflectance _r: BC1_UNORM_SRGB; disk-verified stages + short SHA temp paths + preserve core commands)"
 
 if ($PSVersionTable.PSVersion.Major -lt 7) { throw "Run with PowerShell 7+ (pwsh)." }
 if (-not (Test-Path -LiteralPath $RootDir))    { throw "RootDir not found: $RootDir" }
@@ -402,6 +402,18 @@ function Get-RelativePath([string]$base, [string]$full) {
   return $full
 }
 
+
+function Get-ShortWorkKey([string]$Value) {
+	if ([string]::IsNullOrWhiteSpace($Value)) { $Value = '_root' }
+	$sha = [System.Security.Cryptography.SHA256]::Create()
+	try {
+		$bytes = [System.Text.Encoding]::UTF8.GetBytes($Value.ToLowerInvariant())
+		return ([Convert]::ToHexString($sha.ComputeHash($bytes))).Substring(0, 16).ToLowerInvariant()
+	}
+	finally {
+		if ($sha) { $sha.Dispose() }
+	}
+}
 function Is-LowResFolderName([string]$name) { return ($name -match '_l(?=-)') }
 
 function Is-ReflectanceFolderName([string]$name) {
@@ -591,21 +603,25 @@ foreach ($f in $ddsList) {
   $outDir = Join-Path $OutRoot $relDir
   $outDds = Join-Path $outDir $f.Name
 
-  $pngInDir  = Join-Path $pngInRoot $relDir
-  $pngAdjDir = Join-Path $pngAdjRoot $relDir
+  # Keep final output paths unchanged, but keep transient PNG/DDS encode stages
+  # in short SHA folders to avoid Windows path-length failures.
+  $dirKey  = Get-ShortWorkKey $relDir
+  $fileKey = Get-ShortWorkKey $rel
+
+  $pngInDir  = Join-Path $pngInRoot $dirKey
+  $pngAdjDir = Join-Path $pngAdjRoot $dirKey
 
   $png1   = Join-Path $pngInDir  ($base + ".png")
   $pngAdj = Join-Path $pngAdjDir ($base + "_adj.png")
 
-  $safeRel = ($rel -replace '[\\/:*?"<>|]', '_')
-  $log = Join-Path $LogRoot ("reflfix_" + $safeRel + ".log")
+  $log = Join-Path $LogRoot ("reflfix_" + $fileKey + ".log")
 
-  $encTmp = Join-Path $EncodeTmp ("enc_" + $safeRel)
+  $encTmp = Join-Path $EncodeTmp ("enc_" + $fileKey)
 
   $backupPath = if ($Apply -and (-not $NoBackup)) { Join-Path $BackupDir $rel } else { $null }
 
   [void]$manifest.Add([PSCustomObject]@{
-    FullName=$full; Rel=$rel; RelDir=$relDir; Base=$base
+    FullName=$full; Rel=$rel; RelDir=$relDir; WorkKey=$dirKey; FileKey=$fileKey; Base=$base
     OutDir=$outDir; OutDds=$outDds
     PngInDir=$pngInDir; PngAdjDir=$pngAdjDir
     Png1=$png1; PngAdj=$pngAdj

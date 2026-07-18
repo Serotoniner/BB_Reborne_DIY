@@ -380,6 +380,49 @@ function Write-JsonNoBom {
     )
 }
 
+function Save-WitchyRoamingSettingsState {
+    $path = Get-WitchyRoamingSettingsPath
+    $exists = Test-Path -LiteralPath $path -PathType Leaf
+    $bytes = $null
+
+    if ($exists) {
+        $bytes = [System.IO.File]::ReadAllBytes($path)
+    }
+
+    return [pscustomobject]@{
+        Path   = $path
+        Existed = [bool]$exists
+        Bytes  = $bytes
+    }
+}
+
+function Restore-WitchyRoamingSettingsState {
+    param(
+        [Parameter(Mandatory)][object]$State
+    )
+
+    $path = [string]$State.Path
+    if ([string]::IsNullOrWhiteSpace($path)) {
+        throw 'Cannot restore WitchyBND settings because the saved path is empty.'
+    }
+
+    if ([bool]$State.Existed) {
+        $dir = Split-Path -Parent $path
+        if (-not [string]::IsNullOrWhiteSpace($dir)) {
+            New-Item -ItemType Directory -Path $dir -Force | Out-Null
+        }
+
+        [System.IO.File]::WriteAllBytes($path, [byte[]]$State.Bytes)
+        Write-Info "WitchyBND settings restored to the exact pre-step file: $path"
+        return
+    }
+
+    if (Test-Path -LiteralPath $path -PathType Leaf) {
+        Remove-Item -LiteralPath $path -Force
+    }
+    Write-Info "WitchyBND temporary settings removed because no pre-step settings file existed: $path"
+}
+
 function Write-WitchySettingsForGlobalStep {
     param(
         [Parameter(Mandatory)][ValidateSet('v3.0.0.1','v2.14.4.5','v2.14.4.5-nonrecursive','v2.4.0.1','None')][string]$Version,
@@ -848,7 +891,12 @@ foreach ($step in $steps) {
     Write-Stage ''
     Write-Stage "Running: $($step.Label)"
 
-    Write-WitchySettingsForGlobalStep -Version $step.WitchySettings -WitchyExe $step.WitchyExe
+    $restoreWitchyAfterStep = ([string]$step.WitchySettings -eq 'v2.14.4.5-nonrecursive')
+    $savedWitchySettings = $null
+    if ($restoreWitchyAfterStep) {
+        $savedWitchySettings = Save-WitchyRoamingSettingsState
+        Write-Info 'Saved the current WitchyBND roaming settings before the temporary non-recursive OBJ texture profile.'
+    }
 
     $stepOutputRoot = $OutputRoot
     $noirStep05ProxyOutputRoot = ''
@@ -861,18 +909,27 @@ foreach ($step in $steps) {
         Write-Info "Noir Step 05 final OBJ output will be copied into: $(Join-Path (Join-Path $OutputRoot 'BBReborne_noir_obj') 'obj')"
     }
 
-    $result = Invoke-ChildScript `
-        -PwshPath $PwshExe `
-        -ScriptPath $scriptPath `
-        -Label $step.Label `
-        -LogPath $logPath `
-        -ToolPathsPath $configPath `
-        -GameRootPath $GameRoot `
-        -OutputRootPath $stepOutputRoot `
-        -CpuThrottleValue $CpuThrottle `
-        -GpuThrottleValue $GpuThrottle `
-        -ExtraArguments $step.ExtraArguments `
-        -KeepWork:$KeepChildWork
+    try {
+        Write-WitchySettingsForGlobalStep -Version $step.WitchySettings -WitchyExe $step.WitchyExe
+
+        $result = Invoke-ChildScript `
+            -PwshPath $PwshExe `
+            -ScriptPath $scriptPath `
+            -Label $step.Label `
+            -LogPath $logPath `
+            -ToolPathsPath $configPath `
+            -GameRootPath $GameRoot `
+            -OutputRootPath $stepOutputRoot `
+            -CpuThrottleValue $CpuThrottle `
+            -GpuThrottleValue $GpuThrottle `
+            -ExtraArguments $step.ExtraArguments `
+            -KeepWork:$KeepChildWork
+    }
+    finally {
+        if ($restoreWitchyAfterStep -and $null -ne $savedWitchySettings) {
+            Restore-WitchyRoamingSettingsState -State $savedWitchySettings
+        }
+    }
 
     if ($result.Ok -and [string]$step.Id -eq '05') {
         try {

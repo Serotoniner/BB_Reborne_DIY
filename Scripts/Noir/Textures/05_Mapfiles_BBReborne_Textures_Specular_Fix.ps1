@@ -322,7 +322,7 @@ trap {
 	break
 }
 
-Write-Host "SCRIPT VERSION: 2026-02-19 (specular BC4: disk-verified stages + live progress + apply cleanup + preserve core commands + optional FlatBright/BrightBusy branches)"
+Write-Host "SCRIPT VERSION: 2026-07-06 v2 (specular BC4: short hashed external-tool work paths; disk-verified stages + live progress + optional FlatBright/BrightBusy branches)"
 
 if ($PSVersionTable.PSVersion.Major -lt 7) { throw "Run with PowerShell 7+ (pwsh)." }
 if (-not (Test-Path -LiteralPath $RootDir))    { throw "RootDir not found: $RootDir" }
@@ -330,6 +330,19 @@ if (-not (Test-Path -LiteralPath $TexconvExe)) { throw "texconv.exe not found: $
 if (-not (Test-Path -LiteralPath $MagickExe))  { throw "magick.exe not found: $MagickExe" }
 
 function Ensure-Dir([string]$p) { [System.IO.Directory]::CreateDirectory($p) | Out-Null }
+
+function Get-ShortWorkKey([string]$Value) {
+	$normalized = if ($null -eq $Value) { "" } else { $Value.ToLowerInvariant() }
+	$sha = [System.Security.Cryptography.SHA256]::Create()
+	try {
+		$bytes = [System.Text.Encoding]::UTF8.GetBytes($normalized)
+		$hash = $sha.ComputeHash($bytes)
+		return ([System.BitConverter]::ToString($hash).Replace('-', '').Substring(0, 32).ToLowerInvariant())
+	}
+	finally {
+		$sha.Dispose()
+	}
+}
 
 function Get-RelativePath([string]$base, [string]$full) {
 	$b = (Resolve-Path -LiteralPath $base).Path.TrimEnd('\')
@@ -543,19 +556,17 @@ foreach ($f in $ddsList) {
 	$outDir = Join-Path $OutRoot $relDir
 	$outDds = Join-Path $outDir $f.Name
 	
-	$pngInDir   = Join-Path $pngInRoot   $relDir
-	$pngGrayDir = Join-Path $pngGrayRoot $relDir
-	$pngAdjDir  = Join-Path $pngAdjRoot  $relDir
+	$workKey = Get-ShortWorkKey $rel
+	$pngInDir   = Join-Path $pngInRoot   $workKey
+	$pngGrayDir = Join-Path $pngGrayRoot $workKey
+	$pngAdjDir  = Join-Path $pngAdjRoot  $workKey
 	
 	$png1    = Join-Path $pngInDir   ($base + ".png")
 	$pngGray = Join-Path $pngGrayDir ($base + "_r.png")
 	$pngAdj  = Join-Path $pngAdjDir  ($base + "_adj.png")
 	
-	$safeRel = ($rel -replace '[\\/:*?"<>|]', '_')
-	$log = Join-Path $LogRoot ("specfix_" + $safeRel + ".log")
-	
-	$encTmp = Join-Path $EncodeTmp ("enc_" + $safeRel)
-	
+	$log = Join-Path $LogRoot ("specfix_" + $workKey + ".log")
+	$encTmp = Join-Path $EncodeTmp $workKey
 	$backupPath = if ($Apply -and (-not $NoBackup)) { Join-Path $BackupDir $rel } else { $null }
 	
 	[void]$manifest.Add([PSCustomObject]@{

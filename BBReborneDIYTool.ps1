@@ -49,12 +49,12 @@
       - Provides a No texture upscale toggle that passes -NoUpscale to the texture step, keeping treatments while targeting 1x textures.
       - Provides an optional Real-ESRGAN model file selector under the Real-ESRGAN setup row for the texture AI diffuse step.
 
-    - BBReborne Noir tab.
+    - Extra: SlashNoir tab.
       - Adds a separate Scripts\Noir location for experimental noir-aesthetic scripts, preserving Mapfiles-style wrappers.
       - Documents the first-pass albedo desaturation rules for the Noir diffuse texture script.
       - Runs selected Noir map steps from a Step-2-style map grid; Step 8 uses Scripts\Noir\Mapfiles\08_Mapfiles_BBReborne_Textures.ps1.
 
-    - Step 3: Param tweaks tab.
+    - Extra: Param Tweaks tab.
       - Scans gparam XML patch files under .\Diffs for the five Yebis params.
       - Shows map/time rows with spoiler-safe raw codes or friendly labels.
       - Provides nested editable columns for Exposure, Gamma, ColorS, MiddleGray, and LutSourceId.
@@ -4166,7 +4166,50 @@ $Tools = @(
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Step 3: Param tweaks">
+            <TabItem Header="Extra: SlashNoir">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Padding="12" CornerRadius="8" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" Background="{StaticResource PanelBrush}">
+                        <TextBlock TextWrapping="Wrap" FontSize="14">
+                            Workflow for generating de-saturated textures used in the SlashNoir mod spin-off.
+                        </TextBlock>
+                    </Border>
+
+
+                    <GroupBox Grid.Row="1" Header="SlashNoir file generation" Margin="0,12,0,10" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}">
+                        <Grid Margin="10">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" TextWrapping="Wrap" Margin="4,0,4,10">
+                                SlashNoir uses a separate Scripts\Noir tree so the main BB Reborne workflow stays untouched. The GLOBAL row exposes compatible OBJ generation and OBJ texture processing. Map rows currently expose the texture workflow and write to BBReborne_noir_textures.
+                            </TextBlock>
+
+                            <DockPanel Grid.Row="1" LastChildFill="False" Margin="4,0,4,10">
+                                <TextBlock DockPanel.Dock="Left" Name="TxtNoirRunStatus" Text="SlashNoir rows use the separate Scripts\Noir folder." VerticalAlignment="Center"/>
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                    <CheckBox Name="ChkShowNoirMapNames" Content="Show name spoilers" Margin="0,4,12,0" Foreground="{StaticResource TextBrush}" ToolTip="Display map names instead of hidden spoiler-safe labels."/>
+                                    <CheckBox Name="ChkNoirNoUpscaleTextures" Content="No texture upscale" Margin="0,4,12,0" Foreground="{StaticResource TextBrush}" ToolTip="Pass -NoUpscale to the SlashNoir texture step."/>
+                                    <Button Name="BtnRunAllNoirMapPatches" Content="Run all Noir patches" Width="145" Height="28" Margin="0,0,8,0" ToolTip="Run selected SlashNoir GLOBAL steps first, then run the selected SlashNoir map steps for every map."/>
+                                </StackPanel>
+                            </DockPanel>
+
+                            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                                <Grid Name="NoirMapsGrid"/>
+                            </ScrollViewer>
+                        </Grid>
+                    </GroupBox>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Extra: Param Tweaks">
                 <Grid Margin="10">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -4214,50 +4257,6 @@ $Tools = @(
             </TabItem>
 
 
-
-            <TabItem Header="BBReborne Noir">
-                <Grid Margin="10">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <Border Grid.Row="0" Padding="12" CornerRadius="8" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" Background="{StaticResource PanelBrush}">
-                        <TextBlock TextWrapping="Wrap" FontSize="14">
-                            Experimental spin-off workflow for a noir aesthetic. This tab mirrors the map-step layout from Step 2, but uses the separate Scripts\Noir tree. Current first pass: Step 8 Textures uses Scripts\Noir\Mapfiles\08_Mapfiles_BBReborne_Textures.ps1, which forwards -Noir to the Noir diffuse texture worker.
-                        </TextBlock>
-                    </Border>
-
-
-                    <GroupBox Grid.Row="1" Header="Noir file generation" Margin="0,12,0,10" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}">
-                        <Grid Margin="10">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-
-                            <TextBlock Grid.Row="0" TextWrapping="Wrap" Margin="4,0,4,10">
-                                Noir scripts are intentionally separate from the main BB Reborne scripts. The GLOBAL row exposes Step 5 OBJ from diffs and Step 7 Noir OBJ embedded textures. Map rows currently expose Step 8 Textures and write to BBReborne_noir_textures.
-                            </TextBlock>
-
-                            <DockPanel Grid.Row="1" LastChildFill="False" Margin="4,0,4,10">
-                                <TextBlock DockPanel.Dock="Left" Name="TxtNoirRunStatus" Text="Noir map rows use the separate Scripts\Noir folder." VerticalAlignment="Center"/>
-                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                                    <CheckBox Name="ChkShowNoirMapNames" Content="Show name spoilers" Margin="0,4,12,0" Foreground="{StaticResource TextBrush}" ToolTip="Display map names instead of hidden spoiler-safe labels."/>
-                                    <CheckBox Name="ChkNoirNoUpscaleTextures" Content="No texture upscale" Margin="0,4,12,0" Foreground="{StaticResource TextBrush}" ToolTip="Pass -NoUpscale to the Noir texture step."/>
-                                    <Button Name="BtnRunAllNoirMapPatches" Content="Run all Noir patches" Width="145" Height="28" Margin="0,0,8,0" ToolTip="Run selected Noir map steps for every map."/>
-                                    <Button Name="BtnOpenNoirScriptsFolder" Content="Open Noir scripts" Width="130" Height="28" ToolTip="Open Scripts\Noir under this tool folder."/>
-                                </StackPanel>
-                            </DockPanel>
-
-                            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                                <Grid Name="NoirMapsGrid"/>
-                            </ScrollViewer>
-                        </Grid>
-                    </GroupBox>
-                </Grid>
-            </TabItem>
 
         </TabControl>
     </Grid>
@@ -4345,6 +4344,28 @@ $ScopeReferenceSeconds = [ordered]@{
     M34    = 2927.0
     M35    = 1256.0
     M36    = 1400.0
+}
+
+# Noir timings are tracked independently from the main workflow because the
+# separate desaturation/repack path has a different runtime profile.
+# GLOBAL remains at the already-calibrated 41:02; map values are from the
+# latest complete Noir map run.
+$NoirScopeReferenceSeconds = [ordered]@{
+    GLOBAL = 2110.0
+    M21    = 897.0
+    M22    = 1251.0
+    M23    = 1911.0
+    M24    = 3953.0
+    M25    = 899.0
+    M26    = 881.0
+    M27    = 624.0
+    M28    = 1766.0
+    M29    = 3677.0
+    M32    = 1812.0
+    M33    = 1199.0
+    M34    = 2140.0
+    M35    = 965.0
+    M36    = 1093.0
 }
 
 function Write-UiLog {
@@ -5597,6 +5618,58 @@ function Get-ScaledReferenceTotalSeconds {
     foreach ($entry in $ScopeReferenceSeconds.GetEnumerator()) {
         $scopeCode = [string]$entry.Key
         $seconds = Get-ScaledReferenceSeconds -ScopeCode $scopeCode
+        if ($null -ne $seconds) { $total += [double]$seconds }
+    }
+    return $total
+}
+
+function Get-NoirReferenceEstimateScale {
+    $actualTotal = 0.0
+    $referenceTotal = 0.0
+
+    foreach ($entry in $NoirScopeElapsedSeconds.GetEnumerator()) {
+        $scopeCode = [string]$entry.Key
+        if ($scopeCode -eq 'GLOBAL') { continue }
+        if (-not $NoirScopeReferenceSeconds.Contains($scopeCode)) { continue }
+        if (-not $NoirScopeCompleted.ContainsKey($scopeCode)) { continue }
+        if (-not [bool]$NoirScopeCompleted[$scopeCode]) { continue }
+
+        $refSeconds = [double]$NoirScopeReferenceSeconds[$scopeCode]
+        if ($refSeconds -le 0) { continue }
+
+        $actualTotal += [double]$entry.Value
+        $referenceTotal += $refSeconds
+    }
+
+    if ($referenceTotal -le 0) { return 1.0 }
+    return ($actualTotal / $referenceTotal)
+}
+
+function Get-NoirScaledReferenceSeconds {
+    param([Parameter(Mandatory)][string]$ScopeCode)
+
+    if (-not $NoirScopeReferenceSeconds.Contains($ScopeCode)) { return $null }
+
+    $seconds = [double]$NoirScopeReferenceSeconds[$ScopeCode]
+    if ($ScopeCode -ne 'GLOBAL') {
+        $seconds *= (Get-NoirReferenceEstimateScale)
+    }
+    return $seconds
+}
+
+function Get-NoirScopeEstimateText {
+    param([Parameter(Mandatory)][string]$ScopeCode)
+
+    $seconds = Get-NoirScaledReferenceSeconds -ScopeCode $ScopeCode
+    if ($null -eq $seconds) { return 'TBD' }
+    return (Format-ElapsedSeconds -Seconds ([double]$seconds))
+}
+
+function Get-NoirScaledReferenceTotalSeconds {
+    $total = 0.0
+    foreach ($entry in $NoirScopeReferenceSeconds.GetEnumerator()) {
+        $scopeCode = [string]$entry.Key
+        $seconds = Get-NoirScaledReferenceSeconds -ScopeCode $scopeCode
         if ($null -ne $seconds) { $total += [double]$seconds }
     }
     return $total
@@ -7569,19 +7642,19 @@ function Update-NoirMapNameVisibility {
     }
 
     if ($NoirMapRowControls.ContainsKey('GLOBAL')) {
-        $NoirMapRowControls['GLOBAL'].Name.Text = 'Noir OBJ embedded textures'
+        $NoirMapRowControls['GLOBAL'].Name.Text = 'SlashNoir OBJ textures'
     }
 }
 
 function Update-NoirEstimateDisplay {
     foreach ($entry in $NoirMapRowControls.GetEnumerator()) {
         $scopeCode = [string]$entry.Key
-        if (-not $ScopeReferenceSeconds.Contains($scopeCode)) { continue }
-        $entry.Value.Estimate.Text = (Get-ScopeEstimateText -ScopeCode $scopeCode)
+        if (-not $NoirScopeReferenceSeconds.Contains($scopeCode)) { continue }
+        $entry.Value.Estimate.Text = (Get-NoirScopeEstimateText -ScopeCode $scopeCode)
     }
 
     if ($NoirTotalsControls.ContainsKey('Estimate')) {
-        $NoirTotalsControls.Estimate.Text = (Format-ElapsedSeconds -Seconds (Get-ScaledReferenceTotalSeconds))
+        $NoirTotalsControls.Estimate.Text = (Format-ElapsedSeconds -Seconds (Get-NoirScaledReferenceTotalSeconds))
     }
 }
 
@@ -7596,7 +7669,7 @@ function Update-NoirTotals {
         $elapsedTotal += [double]$value
     }
 
-    $NoirTotalsControls.Estimate.Text = (Format-ElapsedSeconds -Seconds (Get-ScaledReferenceTotalSeconds))
+    $NoirTotalsControls.Estimate.Text = (Format-ElapsedSeconds -Seconds (Get-NoirScaledReferenceTotalSeconds))
     $NoirTotalsControls.Elapsed.Text = (Format-ElapsedSeconds -Seconds $elapsedTotal)
     $NoirTotalsControls.Status.Text = "$completedCount / $totalTargets completed"
 }
@@ -7629,23 +7702,51 @@ function Test-NoirGeneratedFilesForScope {
     $outputRoot = $TxtOutputRoot.Text.Trim()
     if ([string]::IsNullOrWhiteSpace($outputRoot)) { return 'Output folder empty' }
 
-    $noirMapRoot = Join-Path (Join-Path (Join-Path $outputRoot 'BBReborne_noir_textures') 'map') ''
-    if (-not (Test-Path -LiteralPath $noirMapRoot -PathType Container)) {
-        Write-UiLog "$Scope Noir check: output folder not found: $noirMapRoot"
+    $short = Get-ShortMapCode -MapCode $MapCode
+    $noirMapDir = Join-Path (Join-Path (Join-Path $outputRoot 'BBReborne_noir_textures') 'map') $short
+    if (-not (Test-Path -LiteralPath $noirMapDir -PathType Container)) {
+        Write-UiLog "$Scope Noir check: output folder not found: $noirMapDir"
         return 'No output folder'
     }
 
-    $folders = @(Get-MapFoldersForMapCode -MapCode $MapCode)
-    $hits = @()
-    foreach ($folder in $folders) {
-        $escaped = [regex]::Escape($folder)
-        $hits += @(Get-ChildItem -LiteralPath $noirMapRoot -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match $escaped })
+    # Texture packages use compact names such as m21_0000.tpfbdt under
+    # BBReborne_noir_textures\map\m21. They do not use the map-patch
+    # folder names returned by Get-MapFoldersForMapCode (m21_00_00_00).
+    $generatedFiles = @(
+        Get-ChildItem -LiteralPath $noirMapDir -File -ErrorAction SilentlyContinue |
+            Where-Object {
+                $_.Name -notlike 'gi_env_*' -and
+                ($_.Name -like ("{0}*.tpfbdt" -f $short) -or $_.Name -like ("{0}*.tpfbhd" -f $short))
+            }
+    )
+    $generatedCount = $generatedFiles.Count
+
+    $expectedCount = 0
+    $gameRoot = $TxtGameRoot.Text.Trim()
+    if (-not [string]::IsNullOrWhiteSpace($gameRoot)) {
+        $sourceMapDir = Join-Path (Join-Path $gameRoot 'map') $short
+        if (Test-Path -LiteralPath $sourceMapDir -PathType Container) {
+            $expectedFiles = @(
+                Get-ChildItem -LiteralPath $sourceMapDir -File -ErrorAction SilentlyContinue |
+                    Where-Object {
+                        $_.Name -notlike 'gi_env_*' -and
+                        ($_.Name -like ("{0}*.tpfbdt" -f $short) -or $_.Name -like ("{0}*.tpfbhd" -f $short))
+                    }
+            )
+            $expectedCount = $expectedFiles.Count
+        }
     }
 
-    $count = @($hits | Select-Object -Unique).Count
-    Write-UiLog ("{0} Noir check: generated texture files={1} under {2}" -f $Scope, $count, $noirMapRoot)
+    Write-UiLog ("{0} Noir check: expected texture files={1}, generated={2}, folder={3}" -f $Scope, $expectedCount, $generatedCount, $noirMapDir)
 
-    if ($count -gt 0) { return ("Generated ({0})" -f $count) }
+    if ($expectedCount -gt 0) {
+        if ($generatedCount -ge $expectedCount) {
+            return ("Generated ({0}/{1})" -f $generatedCount, $expectedCount)
+        }
+        return ("Missing Noir textures ({0}/{1})" -f $generatedCount, $expectedCount)
+    }
+
+    if ($generatedCount -gt 0) { return ("Generated ({0})" -f $generatedCount) }
     return 'Missing Noir textures'
 }
 
@@ -7787,6 +7888,8 @@ function Start-VisibleNoirMapPatchProcess {
 }
 
 function Start-VisibleAllNoirMapPatchProcess {
+    param([switch]$SkipConfirmation)
+
     Ensure-ModOutputFolders
     Save-PathFiles -Silent
 
@@ -7843,11 +7946,13 @@ function Start-VisibleAllNoirMapPatchProcess {
 
     if ($mapRuns.Count -eq 0) {
         Write-UiLog 'Run all Noir patches: no enabled map runs.'
+        (C 'BtnRunAllNoirMapPatches').IsEnabled = $true
         return
     }
 
-    if (-not (Show-AllMapPatchFocusWarning -MapRuns $mapRuns)) {
+    if (-not $SkipConfirmation -and -not (Show-AllMapPatchFocusWarning -MapRuns $mapRuns)) {
         Write-UiLog 'Run all Noir patches: cancelled before launch.'
+        (C 'BtnRunAllNoirMapPatches').IsEnabled = $true
         return
     }
 
@@ -7864,11 +7969,21 @@ function Start-VisibleAllNoirMapPatchProcess {
     Write-UiLog "Runner: $masterRunner"
     Write-UiLog "Summary: $masterSummary"
 
+    $selectedMapCodes = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($run in @($mapRuns)) {
+        [void]$selectedMapCodes.Add([string]$run.MapCode)
+    }
+
     foreach ($map in $Maps) {
         $code = [string]$map.Code
-        if ($NoirMapRowControls.ContainsKey($code)) {
+        if (-not $NoirMapRowControls.ContainsKey($code)) { continue }
+
+        if ($selectedMapCodes.Contains($code)) {
             $NoirMapRowControls[$code].Status.Text = 'Queued'
             $NoirMapRowControls[$code].Patch.IsEnabled = $false
+        }
+        elseif ($NoirMapRowControls[$code].Status.Text -in @('Queued','Pending')) {
+            $NoirMapRowControls[$code].Status.Text = 'Not selected'
         }
     }
     $runAllButton = C 'BtnRunAllNoirMapPatches'
@@ -7926,8 +8041,8 @@ function Start-VisibleAllNoirMapPatchProcess {
         $exitCode = $state.Process.ExitCode
         Write-UiLog "Run all Noir patches: PowerShell process exited with code $exitCode."
 
-        foreach ($map in $Maps) {
-            $code = [string]$map.Code
+        foreach ($run in @($state.MapRuns)) {
+            $code = [string]$run.MapCode
             if ($NoirMapRowControls.ContainsKey($code)) { $NoirMapRowControls[$code].Patch.IsEnabled = $true }
         }
         (C 'BtnRunAllNoirMapPatches').IsEnabled = $true
@@ -8001,6 +8116,8 @@ function Test-NoirGlobalGeneratedFiles {
 }
 
 function Start-VisibleNoirGlobalPatchProcess {
+    param([switch]$ContinueWithAllNoirMaps)
+
     Ensure-ModOutputFolders
     Save-PathFiles -Silent
 
@@ -8079,6 +8196,7 @@ function Start-VisibleNoirGlobalPatchProcess {
         Stopwatch = $sw
         ScopeCode = $globalCode
         SelectedSteps = $selectedSteps
+        ContinueWithAllNoirMaps = [bool]$ContinueWithAllNoirMaps
     }
 
     $timer.Add_Tick({
@@ -8119,6 +8237,21 @@ function Start-VisibleNoirGlobalPatchProcess {
         }
 
         Update-NoirTotals
+
+        if ($state.ContinueWithAllNoirMaps) {
+            if ($exitCode -eq 0) {
+                Write-UiLog 'Run all Noir patches: GLOBAL steps completed; starting the Noir map sequence.'
+                try {
+                    Start-VisibleAllNoirMapPatchProcess -SkipConfirmation
+                } catch {
+                    (C 'BtnRunAllNoirMapPatches').IsEnabled = $true
+                    Show-UiError ("Could not start the Noir map sequence after GLOBAL completed:`n`n{0}" -f $_.Exception.Message)
+                }
+            } else {
+                (C 'BtnRunAllNoirMapPatches').IsEnabled = $true
+                Write-UiLog 'Run all Noir patches: GLOBAL failed; the Noir map sequence was not started.'
+            }
+        }
     }.GetNewClosure())
 
     $timer.Start()
@@ -8126,7 +8259,45 @@ function Start-VisibleNoirGlobalPatchProcess {
 
 
 function Invoke-NoirAllMapPatches {
-    Start-VisibleAllNoirMapPatchProcess
+    $selectedGlobalSteps = @(Get-SelectedNoirGlobalStepIds)
+
+    if ($selectedGlobalSteps.Count -eq 0) {
+        Start-VisibleAllNoirMapPatchProcess
+        return
+    }
+
+    $message = @(
+        'Run all selected Noir patches sequentially?',
+        '',
+        ("GLOBAL steps first: {0}" -f ($selectedGlobalSteps -join ', ')),
+        'Then: all enabled Noir map rows',
+        '',
+        'The GLOBAL object steps must finish before the map texture sequence begins. Avoid using the computer while WitchyBND prompts or GPU texture steps are active.'
+    ) -join "`n"
+
+    $result = [System.Windows.MessageBox]::Show(
+        $message,
+        'Run all Noir patches',
+        [System.Windows.MessageBoxButton]::OKCancel,
+        [System.Windows.MessageBoxImage]::Warning
+    )
+
+    if ($result -ne [System.Windows.MessageBoxResult]::OK) {
+        Write-UiLog 'Run all Noir patches: cancelled before launch.'
+        return
+    }
+
+    $runAllButton = C 'BtnRunAllNoirMapPatches'
+    $runAllButton.IsEnabled = $false
+
+    Write-UiLog ("Run all Noir patches: starting GLOBAL step(s) {0} before the map sequence." -f ($selectedGlobalSteps -join ', '))
+
+    try {
+        Start-VisibleNoirGlobalPatchProcess -ContinueWithAllNoirMaps
+    } catch {
+        $runAllButton.IsEnabled = $true
+        throw
+    }
 }
 
 function Invoke-NoirMapPatchStub {
@@ -8165,15 +8336,15 @@ function Build-NoirMapRows {
 
     $rowIndex = 1
 
-    # GLOBAL row: only Noir Global Step 7 is exposed here.
+    # GLOBAL row: Noir compatibility OBJ (05) and embedded texture processing (07).
     $rdGlobal = New-Object System.Windows.Controls.RowDefinition
     $rdGlobal.Height = [System.Windows.GridLength]::Auto
     [void]$NoirMapsGrid.RowDefinitions.Add($rdGlobal)
 
     $globalCode = 'GLOBAL'
     $globalCodeText = New-TextBlockCell -Text $globalCode
-    $globalNameText = New-TextBlockCell -Text 'Noir OBJ compatibility + textures'
-    $globalEstimateText = New-TextBlockCell -Text (Get-ScopeEstimateText -ScopeCode 'GLOBAL')
+    $globalNameText = New-TextBlockCell -Text 'SlashNoir OBJ compatibility + textures'
+    $globalEstimateText = New-TextBlockCell -Text (Get-NoirScopeEstimateText -ScopeCode 'GLOBAL')
     $globalElapsedText = New-TextBlockCell -Text '--'
     $globalStatusText = New-TextBlockCell -Text 'Ready'
 
@@ -8181,22 +8352,31 @@ function Build-NoirMapRows {
     $globalStepsPanel.Orientation = [System.Windows.Controls.Orientation]::Horizontal
     $globalStepsPanel.Margin = [System.Windows.Thickness]::new(2)
     $globalStepsPanel.VerticalAlignment = 'Center'
-    $globalStepsPanel.MinWidth = 160
+    $globalStepsPanel.MinWidth = 300
 
     $globalStepChecks = @{}
 
-    foreach ($globalStep in @(
-        [pscustomobject]@{ Id = '05'; Label = '5'; Tip = '05 OBJ from diffs compatibility output' },
-        [pscustomobject]@{ Id = '07'; Label = '7'; Tip = '07 Noir OBJ embedded textures' }
-    )) {
+    $globalStepInfo = @{
+        '05' = [pscustomobject]@{ Enabled = $true;  Tip = '05 OBJ from diffs compatibility output' }
+        '07' = [pscustomobject]@{ Enabled = $true;  Tip = '07 Noir OBJ embedded textures' }
+    }
+
+    for ($i = 1; $i -le 8; $i++) {
+        $id = ('{0:00}' -f $i)
+        $info = if ($globalStepInfo.ContainsKey($id)) { $globalStepInfo[$id] } else { [pscustomobject]@{ Enabled = $false; Tip = "Global step $i is not used by SlashNoir." } }
+
         $cb = New-Object System.Windows.Controls.CheckBox
-        $cb.Content = [string]$globalStep.Label
+        $cb.Content = [string]$i
         $cb.Margin = [System.Windows.Thickness]::new(6,0,6,0)
         $cb.MinWidth = 28
         $cb.VerticalAlignment = 'Center'
-        $cb.IsChecked = $true
-        $cb.Tag = [string]$globalStep.Id
-        $cb.ToolTip = [string]$globalStep.Tip
+        $cb.IsChecked = [bool]$info.Enabled
+        $cb.IsEnabled = [bool]$info.Enabled
+        $cb.Tag = $id
+        $cb.ToolTip = [string]$info.Tip
+        if (-not [bool]$info.Enabled) {
+            $cb.Opacity = 0.35
+        }
         $cb.Add_Click({
             if (-not $script:IsUpdatingNoirMapStepBulkChecks) {
                 Update-NoirMapStepBulkCheckboxState
@@ -8204,12 +8384,12 @@ function Build-NoirMapRows {
         }.GetNewClosure())
 
         [void]$globalStepsPanel.Children.Add($cb)
-        $globalStepChecks[[string]$globalStep.Id] = $cb
+        $globalStepChecks[$id] = $cb
     }
 
     $NoirMapStepCheckControls[$globalCode] = $globalStepChecks
 
-    $globalPatchButton = New-ButtonCell -Text 'Run Noir' -Width 96 -Tooltip 'Run selected Noir global steps. Step 5 and Step 7 are available.'
+    $globalPatchButton = New-ButtonCell -Text 'Run Noir' -Width 96 -Tooltip 'Run selected SlashNoir global steps. Step 5 and Step 7 are available.'
     $globalCheckButton = New-ButtonCell -Text 'Check' -Width 95 -Tooltip 'Check generated OBJ compatibility and Noir OBJ files.'
 
     $globalPatchButton.Add_Click({
@@ -8255,7 +8435,7 @@ function Build-NoirMapRows {
 
         $codeText = New-TextBlockCell -Text $map.Code
         $nameText = New-TextBlockCell -Text 'Hidden' -Tooltip 'Enable Show name spoilers to reveal map names.'
-        $estimateText = New-TextBlockCell -Text (Get-ScopeEstimateText -ScopeCode $map.Code)
+        $estimateText = New-TextBlockCell -Text (Get-NoirScopeEstimateText -ScopeCode $map.Code)
         $elapsedText = New-TextBlockCell -Text '--'
         $statusText = New-TextBlockCell -Text 'Ready'
         $stepsPanel = New-NoirStepCheckboxPanel -MapCode $map.Code
@@ -8306,7 +8486,7 @@ function Build-NoirMapRows {
 
     $totalCode = New-TextBlockCell -Text 'TOTAL' -Bold
     $totalName = New-TextBlockCell -Text 'Noir global + maps' -Bold
-    $totalEstimate = New-TextBlockCell -Text (Format-ElapsedSeconds -Seconds (Get-ScaledReferenceTotalSeconds)) -Bold
+    $totalEstimate = New-TextBlockCell -Text (Format-ElapsedSeconds -Seconds (Get-NoirScaledReferenceTotalSeconds)) -Bold
     $totalElapsed = New-TextBlockCell -Text '--' -Bold
     $totalStepsPanel = New-NoirStepBulkCheckboxPanel
     $totalStatus = New-TextBlockCell -Text '0 / 15 completed' -Bold
@@ -8657,16 +8837,6 @@ function Build-ToolRows {
         }
     }
 }
-
-
-(C 'BtnOpenNoirScriptsFolder').Add_Click({
-    Invoke-SafeUiAction {
-        $noirRoot = Join-Path (Join-Path $scriptRoot 'Scripts') 'Noir'
-        New-Item -ItemType Directory -Path $noirRoot -Force | Out-Null
-        Start-Process explorer.exe -ArgumentList "`"$noirRoot`""
-        Write-UiLog "Opened Noir scripts folder: $noirRoot"
-    }
-})
 
 
 
